@@ -7,6 +7,16 @@ require __DIR__ . '/../app/bootstrap.php';
 Auth::requireRole('DIRECTOR');
 
 $pageTitle = 'Dashboard ผู้อำนวยการ';
+$fiscalYears = fetch_fiscal_years();
+$selectedFiscalYearId = isset($_GET['fiscal_year_id']) ? (int) $_GET['fiscal_year_id'] : 0;
+$selectedDateFrom = trim((string) ($_GET['date_from'] ?? ''));
+$selectedDateTo = trim((string) ($_GET['date_to'] ?? ''));
+$range = resolve_report_filter_range($selectedDateFrom, $selectedDateTo, $selectedFiscalYearId);
+$exportUrl = build_query_url('actions/director_export_reports.php', [
+    'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
+    'date_from' => $range['date_from'],
+    'date_to' => $range['date_to'],
+]);
 $stats = [
     'total_reports' => 0,
     'pending' => 0,
@@ -19,42 +29,67 @@ $recentReports = [];
 
 try {
     $pdo = Database::connection();
+    $conditions = [];
+    $params = [];
 
-    $countStmt = $pdo->query(
+    if ($range['date_from'] !== null) {
+        $conditions[] = 'DATE(ir.reported_at) >= :date_from';
+        $params['date_from'] = $range['date_from'];
+    }
+
+    if ($range['date_to'] !== null) {
+        $conditions[] = 'DATE(ir.reported_at) <= :date_to';
+        $params['date_to'] = $range['date_to'];
+    }
+
+    $whereSql = $conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions);
+
+    $countStmt = $pdo->prepare(
         "SELECT
             COUNT(*) AS total_reports,
             SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress,
             SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed
-         FROM incident_reports"
+         FROM incident_reports ir" . $whereSql
     );
+    $countStmt->execute($params);
     $stats = array_merge($stats, $countStmt->fetch() ?: []);
 
-    $severitySummary = $pdo->query(
+    $severityStmt = $pdo->prepare(
         "SELECT sl.level_code, COUNT(*) AS total
          FROM incident_reports ir
          INNER JOIN severity_levels sl ON sl.id = ir.current_severity_id
+         " . $whereSql . "
          GROUP BY sl.level_code
          ORDER BY total DESC, sl.level_code ASC"
-    )->fetchAll();
+    );
+    $severityStmt->execute($params);
+    $severitySummary = $severityStmt->fetchAll();
 
-    $teamSummary = $pdo->query(
+    $teamStmt = $pdo->prepare(
         "SELECT t.team_code, COUNT(*) AS total
          FROM report_assignments ra
+         INNER JOIN incident_reports ir ON ir.id = ra.report_id
          INNER JOIN teams t ON t.id = ra.target_team_id
+         " . $whereSql . "
          GROUP BY t.team_code
          ORDER BY total DESC, t.team_code ASC"
-    )->fetchAll();
+    );
+    $teamStmt->execute($params);
+    $teamSummary = $teamStmt->fetchAll();
 
-    $recentReports = $pdo->query(
+    $recentStmt = $pdo->prepare(
         "SELECT ir.report_no, ir.incident_title, ir.status, ir.reported_at, d.department_name
          FROM incident_reports ir
          INNER JOIN departments d ON d.id = ir.incident_department_id
+         " . $whereSql . "
          ORDER BY ir.id DESC
          LIMIT 10"
-    )->fetchAll();
+    );
+    $recentStmt->execute($params);
+    $recentReports = $recentStmt->fetchAll();
 } catch (Throwable) {
-    // ให้ dashboard เปิดได้แม้ฐานข้อมูลยังไม่พร้อมทั้งหมด
+    // keep dashboard open even if db setup is incomplete
 }
 
 $severityLabels = array_map(static fn(array $row): string => (string) $row['level_code'], $severitySummary);
@@ -70,7 +105,7 @@ require __DIR__ . '/../partials/layout_top.php';
             <div>
                 <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Director Overview</div>
                 <h1 class="text-3xl font-bold text-slate-900">Dashboard ผู้อำนวยการ</h1>
-                <p class="mt-2 text-slate-600">ภาพรวมความเสี่ยงขององค์กรสำหรับติดตามสถานะและแนวโน้มสำคัญ</p>
+                <p class="mt-2 text-slate-600">ภาพรวมความเสี่ยงขององค์กรสำหรับติดตามสถานะ แนวโน้มสำคัญ และกรองตามปีงบประมาณหรือช่วงวันที่ได้</p>
             </div>
             <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
                 กลับ Dashboard
@@ -95,6 +130,33 @@ require __DIR__ . '/../partials/layout_top.php';
                 <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['completed']) ?></div>
             </div>
         </div>
+
+        <form method="get" class="mt-8 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-3">
+            <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700">ปีงบประมาณ</label>
+                <select name="fiscal_year_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                    <option value="">ทั้งหมด</option>
+                    <?php foreach ($fiscalYears as $year): ?>
+                        <option value="<?= e((string) $year['id']) ?>" <?= $selectedFiscalYearId === (int) $year['id'] ? 'selected' : '' ?>>
+                            <?= e((string) $year['year_label']) ?> (<?= e((string) $year['date_start']) ?> - <?= e((string) $year['date_end']) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700">วันที่รายงานจาก</label>
+                <input name="date_from" type="date" value="<?= e($range['date_from'] ?? '') ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700">วันที่รายงานถึง</label>
+                <input name="date_to" type="date" value="<?= e($range['date_to'] ?? '') ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+            </div>
+            <div class="lg:col-span-3 flex flex-wrap gap-3">
+                <button type="submit" class="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700">กรองข้อมูล</button>
+                <a href="<?= e(base_url('director/dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-100">ล้างตัวกรอง</a>
+                <a href="<?= e($exportUrl) ?>" class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-medium text-emerald-700 transition hover:bg-emerald-100">Export CSV</a>
+            </div>
+        </form>
 
         <div class="mt-8 grid gap-6 xl:grid-cols-2">
             <div class="rounded-2xl border border-slate-200 p-6">

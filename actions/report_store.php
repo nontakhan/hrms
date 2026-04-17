@@ -35,6 +35,16 @@ foreach (['incident_title', 'incident_type', 'incident_datetime', 'incident_depa
     }
 }
 
+if (mb_strlen($input['incident_title']) > 255 || mb_strlen($input['incident_detail']) > 5000 || mb_strlen($input['initial_action']) > 3000) {
+    flash_set('error', 'ข้อมูลที่กรอกยาวเกินกว่าที่ระบบกำหนด');
+    redirect('/public/report_create.php');
+}
+
+if ($input['reporter_phone'] !== '' && !preg_match('/^[0-9+\-\s()]{6,50}$/', $input['reporter_phone'])) {
+    flash_set('error', 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง');
+    redirect('/public/report_create.php');
+}
+
 $allowedSeverities = $input['incident_type'] === 'CLINICAL'
     ? ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
     : ['1', '2', '3', '4'];
@@ -135,6 +145,8 @@ try {
     ]);
 
     if (isset($_FILES['attachment']) && is_uploaded_file($_FILES['attachment']['tmp_name'])) {
+        $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+        $maxFileSize = 5 * 1024 * 1024;
         $uploadDir = app_config('upload_dir');
 
         if (!is_dir($uploadDir)) {
@@ -143,10 +155,22 @@ try {
 
         $originalName = (string) $_FILES['attachment']['name'];
         $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+        if (!in_array($extension, $allowedExtensions, true)) {
+            throw new RuntimeException('ชนิดไฟล์แนบไม่รองรับ');
+        }
+
+        $fileSize = (int) ($_FILES['attachment']['size'] ?? 0);
+        if ($fileSize <= 0 || $fileSize > $maxFileSize) {
+            throw new RuntimeException('ไฟล์แนบต้องมีขนาดไม่เกิน 5 MB');
+        }
+
         $safeName = uniqid('attachment_', true) . ($extension !== '' ? '.' . $extension : '');
         $targetPath = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $safeName;
 
-        move_uploaded_file($_FILES['attachment']['tmp_name'], $targetPath);
+        if (!move_uploaded_file($_FILES['attachment']['tmp_name'], $targetPath)) {
+            throw new RuntimeException('อัปโหลดไฟล์แนบไม่สำเร็จ');
+        }
 
         $attachmentStmt = $pdo->prepare(
             'INSERT INTO incident_attachments (report_id, file_name, file_path, file_type, file_size)
@@ -158,7 +182,7 @@ try {
             'file_name' => $originalName,
             'file_path' => $targetPath,
             'file_type' => (string) ($_FILES['attachment']['type'] ?? ''),
-            'file_size' => (int) ($_FILES['attachment']['size'] ?? 0),
+            'file_size' => $fileSize,
         ]);
     }
 

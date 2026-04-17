@@ -34,7 +34,7 @@ require __DIR__ . '/../partials/layout_top.php';
 
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">ชื่อหัวข้อเหตุการณ์</label>
-                <input name="incident_title" type="text" value="<?= e((string) old('incident_title')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500" required>
+                <input name="incident_title" type="text" maxlength="255" value="<?= e((string) old('incident_title')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500" required>
             </div>
 
             <div>
@@ -82,27 +82,28 @@ require __DIR__ . '/../partials/layout_top.php';
 
             <div class="lg:col-span-2">
                 <label class="mb-2 block text-sm font-medium text-slate-700">รายละเอียดเหตุการณ์</label>
-                <textarea name="incident_detail" rows="6" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500" required><?= e((string) old('incident_detail')) ?></textarea>
+                <textarea name="incident_detail" rows="6" maxlength="5000" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500" required><?= e((string) old('incident_detail')) ?></textarea>
             </div>
 
             <div class="lg:col-span-2">
                 <label class="mb-2 block text-sm font-medium text-slate-700">การแก้ไขเบื้องต้น</label>
-                <textarea name="initial_action" rows="4" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500"><?= e((string) old('initial_action')) ?></textarea>
+                <textarea name="initial_action" rows="4" maxlength="3000" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500"><?= e((string) old('initial_action')) ?></textarea>
             </div>
 
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">ชื่อผู้รายงาน (ถ้ามี)</label>
-                <input name="reporter_name" type="text" value="<?= e((string) old('reporter_name')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500">
+                <input name="reporter_name" type="text" maxlength="255" value="<?= e((string) old('reporter_name')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500">
             </div>
 
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">เบอร์โทร (ถ้ามี)</label>
-                <input name="reporter_phone" type="text" value="<?= e((string) old('reporter_phone')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500">
+                <input name="reporter_phone" type="text" maxlength="50" value="<?= e((string) old('reporter_phone')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-brand-500">
             </div>
 
             <div class="lg:col-span-2">
                 <label class="mb-2 block text-sm font-medium text-slate-700">ไฟล์แนบ (ถ้ามี)</label>
-                <input name="attachment" type="file" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-brand-500">
+                <input name="attachment" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-brand-500">
+                <p class="mt-2 text-xs text-slate-500">อนุญาตไฟล์ PDF, รูปภาพ, Word, Excel ขนาดไม่เกิน 5 MB</p>
             </div>
 
             <div class="lg:col-span-2 flex justify-end gap-3 pt-4">

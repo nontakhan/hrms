@@ -226,6 +226,82 @@ function active_fiscal_year(): ?array
     }
 }
 
+function fetch_fiscal_years(): array
+{
+    try {
+        $stmt = Database::connection()->query(
+            'SELECT id, year_label, year_short, date_start, date_end, is_active
+             FROM fiscal_years
+             ORDER BY date_start DESC, id DESC'
+        );
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function resolve_report_filter_range(?string $dateFrom, ?string $dateTo, int $fiscalYearId = 0): array
+{
+    $resolvedFrom = null;
+    $resolvedTo = null;
+
+    if ($dateFrom !== null && $dateFrom !== '') {
+        $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateFrom);
+        if ($candidate !== false) {
+            $resolvedFrom = $candidate->format('Y-m-d');
+        }
+    }
+
+    if ($dateTo !== null && $dateTo !== '') {
+        $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateTo);
+        if ($candidate !== false) {
+            $resolvedTo = $candidate->format('Y-m-d');
+        }
+    }
+
+    if (($resolvedFrom === null || $resolvedTo === null) && $fiscalYearId > 0) {
+        try {
+            $stmt = Database::connection()->prepare(
+                'SELECT date_start, date_end
+                 FROM fiscal_years
+                 WHERE id = :id
+                 LIMIT 1'
+            );
+            $stmt->execute(['id' => $fiscalYearId]);
+            $year = $stmt->fetch();
+
+            if ($year) {
+                $resolvedFrom ??= (string) $year['date_start'];
+                $resolvedTo ??= (string) $year['date_end'];
+            }
+        } catch (Throwable) {
+            // keep current values
+        }
+    }
+
+    if ($resolvedFrom !== null && $resolvedTo !== null && $resolvedFrom > $resolvedTo) {
+        [$resolvedFrom, $resolvedTo] = [$resolvedTo, $resolvedFrom];
+    }
+
+    return [
+        'date_from' => $resolvedFrom,
+        'date_to' => $resolvedTo,
+    ];
+}
+
+function build_query_url(string $path, array $params = []): string
+{
+    $filtered = array_filter(
+        $params,
+        static fn(mixed $value): bool => $value !== null && $value !== ''
+    );
+
+    $query = http_build_query($filtered);
+
+    return $query === '' ? base_url($path) : base_url($path) . '?' . $query;
+}
+
 function fetch_team_categories(int $teamId): array
 {
     try {

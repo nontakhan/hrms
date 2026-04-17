@@ -10,6 +10,18 @@ $pageTitle = 'จัดการรายงานความเสี่ยง
 $flashError = flash_get('error');
 $flashSuccess = flash_get('success');
 $reports = [];
+$fiscalYears = fetch_fiscal_years();
+$selectedFiscalYearId = isset($_GET['fiscal_year_id']) ? (int) $_GET['fiscal_year_id'] : 0;
+$selectedStatus = trim((string) ($_GET['status'] ?? ''));
+$selectedDateFrom = trim((string) ($_GET['date_from'] ?? ''));
+$selectedDateTo = trim((string) ($_GET['date_to'] ?? ''));
+$range = resolve_report_filter_range($selectedDateFrom, $selectedDateTo, $selectedFiscalYearId);
+$exportUrl = build_query_url('actions/admin_export_reports.php', [
+    'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
+    'status' => $selectedStatus,
+    'date_from' => $range['date_from'],
+    'date_to' => $range['date_to'],
+]);
 
 try {
     $sql = <<<SQL
@@ -32,10 +44,31 @@ try {
         INNER JOIN incident_types it ON it.id = ir.incident_type_id
         INNER JOIN severity_levels sl ON sl.id = ir.current_severity_id
         INNER JOIN departments d ON d.id = ir.incident_department_id
-        ORDER BY ir.id DESC
+        WHERE 1 = 1
     SQL;
 
-    $reports = Database::connection()->query($sql)->fetchAll();
+    $params = [];
+
+    if ($selectedStatus !== '' && in_array($selectedStatus, ['pending', 'admin_review', 'in_progress', 'completed'], true)) {
+        $sql .= ' AND ir.status = :status';
+        $params['status'] = $selectedStatus;
+    }
+
+    if ($range['date_from'] !== null) {
+        $sql .= ' AND DATE(ir.reported_at) >= :date_from';
+        $params['date_from'] = $range['date_from'];
+    }
+
+    if ($range['date_to'] !== null) {
+        $sql .= ' AND DATE(ir.reported_at) <= :date_to';
+        $params['date_to'] = $range['date_to'];
+    }
+
+    $sql .= ' ORDER BY ir.id DESC';
+
+    $stmt = Database::connection()->prepare($sql);
+    $stmt->execute($params);
+    $reports = $stmt->fetchAll();
 } catch (Throwable) {
     $reports = [];
 }
@@ -48,7 +81,7 @@ require __DIR__ . '/../partials/layout_top.php';
             <div>
                 <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Admin Report Queue</div>
                 <h1 class="text-3xl font-bold text-slate-900">รายการรายงานความเสี่ยง</h1>
-                <p class="mt-2 text-slate-600">สำหรับรับเรื่อง ตรวจสอบ แก้ไขข้อมูล และส่งต่อไปยังทีมนำ</p>
+                <p class="mt-2 text-slate-600">สำหรับรับเรื่อง ตรวจสอบ แก้ไขข้อมูล และส่งต่อไปยังทีมนำ พร้อมกรองข้อมูลตามปีงบและช่วงวันที่ได้</p>
             </div>
             <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
                 กลับ Dashboard
@@ -56,6 +89,42 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
 
         <div class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
+            <form method="get" class="mb-4 grid gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-4">
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">ปีงบประมาณ</label>
+                    <select name="fiscal_year_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                        <option value="">ทั้งหมด</option>
+                        <?php foreach ($fiscalYears as $year): ?>
+                            <option value="<?= e((string) $year['id']) ?>" <?= $selectedFiscalYearId === (int) $year['id'] ? 'selected' : '' ?>>
+                                <?= e((string) $year['year_label']) ?> (<?= e((string) $year['date_start']) ?> - <?= e((string) $year['date_end']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">สถานะ</label>
+                    <select name="status" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                        <option value="">ทั้งหมด</option>
+                        <?php foreach (['pending' => 'รอรับเรื่อง', 'admin_review' => 'Admin กำลังพิจารณา', 'in_progress' => 'กำลังดำเนินการ', 'completed' => 'เสร็จสิ้น'] as $value => $label): ?>
+                            <option value="<?= e($value) ?>" <?= $selectedStatus === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">วันที่รายงานจาก</label>
+                    <input name="date_from" type="date" value="<?= e($range['date_from'] ?? '') ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">วันที่รายงานถึง</label>
+                    <input name="date_to" type="date" value="<?= e($range['date_to'] ?? '') ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                </div>
+                <div class="lg:col-span-4 flex flex-wrap gap-3">
+                    <button type="submit" class="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700">กรองข้อมูล</button>
+                    <a href="<?= e(base_url('admin/reports.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-100">ล้างตัวกรอง</a>
+                    <a href="<?= e($exportUrl) ?>" class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-medium text-emerald-700 transition hover:bg-emerald-100">Export CSV</a>
+                </div>
+            </form>
+
             <table id="reportsTable" class="display w-full text-sm">
                 <thead>
                     <tr>
