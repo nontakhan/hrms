@@ -15,6 +15,15 @@ $departments = fetch_all_departments();
 $headUsers = fetch_department_head_users();
 $visibilityEntries = fetch_team_department_visibility_entries();
 $activeFiscalYear = active_fiscal_year();
+$editFiscalYearId = isset($_GET['edit_fiscal_year']) ? (int) $_GET['edit_fiscal_year'] : 0;
+$editingFiscalYear = null;
+
+foreach ($fiscalYears as $year) {
+    if ((int) $year['id'] === $editFiscalYearId) {
+        $editingFiscalYear = $year;
+        break;
+    }
+}
 
 require __DIR__ . '/../partials/layout_top.php';
 ?>
@@ -48,28 +57,36 @@ require __DIR__ . '/../partials/layout_top.php';
                     </div>
                 </div>
 
-                <form action="<?= e(base_url('actions/admin_save_fiscal_year.php')) ?>" method="post" class="mt-6 grid gap-4 rounded-2xl border border-slate-200 p-6 md:grid-cols-2">
+                <form action="<?= e(base_url($editingFiscalYear ? 'actions/admin_update_fiscal_year.php' : 'actions/admin_save_fiscal_year.php')) ?>" method="post" class="mt-6 grid gap-4 rounded-2xl border border-slate-200 p-6 md:grid-cols-2">
                     <?= csrf_field() ?>
+                    <?php if ($editingFiscalYear): ?>
+                        <input type="hidden" name="fiscal_year_id" value="<?= e((string) $editingFiscalYear['id']) ?>">
+                    <?php endif; ?>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ปีงบประมาณ</label>
-                        <input name="year_label" type="text" maxlength="10" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="2569" required>
+                        <input name="year_label" type="text" maxlength="10" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="2569" value="<?= e((string) ($editingFiscalYear['year_label'] ?? '')) ?>" required>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ปีแบบย่อ</label>
-                        <input name="year_short" type="text" maxlength="10" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="69" required>
+                        <input name="year_short" type="text" maxlength="10" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="69" value="<?= e((string) ($editingFiscalYear['year_short'] ?? '')) ?>" required>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">วันที่เริ่ม</label>
-                        <input name="date_start" type="date" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                        <input name="date_start" type="date" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" value="<?= e((string) ($editingFiscalYear['date_start'] ?? '')) ?>" required>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">วันที่สิ้นสุด</label>
-                        <input name="date_end" type="date" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                        <input name="date_end" type="date" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" value="<?= e((string) ($editingFiscalYear['date_end'] ?? '')) ?>" required>
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 flex flex-wrap gap-3">
                         <button type="submit" class="rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white transition hover:bg-brand-700">
-                            เพิ่มปีงบประมาณ
+                            <?= $editingFiscalYear ? 'บันทึกการแก้ไขปีงบประมาณ' : 'เพิ่มปีงบประมาณ' ?>
                         </button>
+                        <?php if ($editingFiscalYear): ?>
+                            <a href="<?= e(base_url('admin/settings_workflow.php')) ?>" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
+                                ยกเลิกการแก้ไข
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </form>
 
@@ -98,17 +115,22 @@ require __DIR__ . '/../partials/layout_top.php';
                                         </span>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <?php if ((int) $year['is_active'] !== 1): ?>
-                                            <form action="<?= e(base_url('actions/admin_activate_fiscal_year.php')) ?>" method="post">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="fiscal_year_id" value="<?= e((string) $year['id']) ?>">
-                                                <button type="submit" class="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white">
-                                                    ตั้งเป็นปีที่ใช้งาน
-                                                </button>
-                                            </form>
-                                        <?php else: ?>
-                                            <span class="text-xs font-medium text-emerald-700">กำลังใช้งาน</span>
-                                        <?php endif; ?>
+                                        <div class="flex flex-wrap gap-2">
+                                            <a href="<?= e(base_url('admin/settings_workflow.php?edit_fiscal_year=' . $year['id'])) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">
+                                                แก้ไข
+                                            </a>
+                                            <?php if ((int) $year['is_active'] !== 1): ?>
+                                                <form action="<?= e(base_url('actions/admin_activate_fiscal_year.php')) ?>" method="post">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="fiscal_year_id" value="<?= e((string) $year['id']) ?>">
+                                                    <button type="submit" class="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white">
+                                                        ตั้งเป็นปีที่ใช้งาน
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="px-3 py-2 text-xs font-medium text-emerald-700">กำลังใช้งาน</span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -181,6 +203,7 @@ require __DIR__ . '/../partials/layout_top.php';
                                 <th class="px-4 py-3 text-left font-semibold text-slate-700">ผู้เห็นเคส</th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-700">ประเภท</th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-700">สถานะ</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-700">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 bg-white">
@@ -194,6 +217,16 @@ require __DIR__ . '/../partials/layout_top.php';
                                         <span class="rounded-full px-3 py-1 text-xs font-semibold <?= (int) $entry['is_active'] === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' ?>">
                                             <?= (int) $entry['is_active'] === 1 ? 'active' : 'inactive' ?>
                                         </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <form action="<?= e(base_url('actions/admin_toggle_team_visibility_status.php')) ?>" method="post">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="visibility_id" value="<?= e((string) $entry['id']) ?>">
+                                            <input type="hidden" name="current_status" value="<?= e((string) $entry['is_active']) ?>">
+                                            <button type="submit" class="rounded-lg <?= (int) $entry['is_active'] === 1 ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white' ?> px-3 py-2 text-xs font-semibold">
+                                                <?= (int) $entry['is_active'] === 1 ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

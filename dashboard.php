@@ -38,7 +38,7 @@ try {
     );
     $stats['today'] = (int) $todayStmt->fetchColumn();
 } catch (Throwable) {
-    // ปล่อยค่า default เพื่อให้ dashboard เปิดได้แม้ยังไม่ตั้งฐานข้อมูลครบ
+    // Keep defaults if database is not fully ready.
 }
 
 require __DIR__ . '/partials/layout_top.php';
@@ -84,6 +84,7 @@ require __DIR__ . '/partials/layout_top.php';
                 <div class="mt-4 grid gap-3">
                     <?php if (Auth::hasRole('ADMIN')): ?>
                         <a href="<?= e(base_url('admin/settings_public_access.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">ตั้งค่า password กลาง</a>
+                        <a href="<?= e(base_url('admin/settings_workflow.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">ตั้งค่าปีงบประมาณและ workflow</a>
                         <a href="<?= e(base_url('admin/reports.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการรายงานความเสี่ยง</a>
                         <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการข้อมูลพื้นฐาน</a>
                         <a href="<?= e(base_url('admin/users.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการผู้ใช้ระบบ</a>
@@ -103,7 +104,7 @@ require __DIR__ . '/partials/layout_top.php';
                 </div>
             </div>
             <div class="rounded-2xl border border-dashed border-slate-300 p-6 text-slate-600">
-                หน้านี้เป็น dashboard เริ่มต้นของระบบ ภายหลังจะต่อเป็น dashboard เฉพาะ role ด้วย DataTables และ Chart.js
+                หน้านี้เป็น dashboard เริ่มต้นของระบบ และตอนนี้เริ่มเชื่อมทางลัดตาม role ให้ครบมากขึ้นแล้ว เพื่อให้ admin, ทีมนำ, หัวหน้า, และผู้อำนวยการเข้าถึงงานของตัวเองได้เร็วขึ้น
             </div>
         </div>
     </section>
