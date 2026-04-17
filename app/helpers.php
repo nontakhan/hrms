@@ -134,6 +134,21 @@ function fetch_all_teams(): array
     }
 }
 
+function fetch_roles(): array
+{
+    try {
+        $stmt = Database::connection()->query(
+            'SELECT id, role_code, role_name
+             FROM roles
+             ORDER BY id ASC'
+        );
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
 function fetch_incident_types(): array
 {
     try {

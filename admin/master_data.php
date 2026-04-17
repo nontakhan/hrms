@@ -9,20 +9,70 @@ Auth::requireRole('ADMIN');
 $pageTitle = 'จัดการข้อมูลพื้นฐาน';
 $flashError = flash_get('error');
 $flashSuccess = flash_get('success');
-$teams = fetch_all_teams();
-$departments = fetch_all_departments();
+$teams = [];
+$departments = [];
 $allTeamCategories = [];
+$editType = trim((string) ($_GET['edit_type'] ?? ''));
+$editId = isset($_GET['edit_id']) ? (int) $_GET['edit_id'] : 0;
+$editingTeam = null;
+$editingDepartment = null;
+$editingCategory = null;
 
 try {
-    $stmt = Database::connection()->query(
-        'SELECT rc.id, rc.team_id, rc.parent_id, rc.category_name, rc.category_code, t.team_code, t.team_name
+    $teams = Database::connection()->query(
+        'SELECT id, team_code, team_name, description, is_active
+         FROM teams
+         ORDER BY team_code ASC, team_name ASC'
+    )->fetchAll();
+
+    $departments = Database::connection()->query(
+        'SELECT id, department_code, department_name, department_type, parent_department_id, is_nursing_group, is_active
+         FROM departments
+         ORDER BY department_name ASC'
+    )->fetchAll();
+
+    $allTeamCategories = Database::connection()->query(
+        'SELECT rc.id, rc.team_id, rc.parent_id, rc.category_name, rc.category_code, rc.is_active, t.team_code, t.team_name
          FROM risk_categories rc
          INNER JOIN teams t ON t.id = rc.team_id
-         WHERE rc.is_active = 1
          ORDER BY t.team_code ASC, rc.category_name ASC'
-    );
-    $allTeamCategories = $stmt->fetchAll();
+    )->fetchAll();
+
+    if ($editType === 'team' && $editId > 0) {
+        $stmt = Database::connection()->prepare(
+            'SELECT id, team_code, team_name, description, is_active
+             FROM teams
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $stmt->execute(['id' => $editId]);
+        $editingTeam = $stmt->fetch() ?: null;
+    }
+
+    if ($editType === 'department' && $editId > 0) {
+        $stmt = Database::connection()->prepare(
+            'SELECT id, department_code, department_name, department_type, is_nursing_group, is_active
+             FROM departments
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $stmt->execute(['id' => $editId]);
+        $editingDepartment = $stmt->fetch() ?: null;
+    }
+
+    if ($editType === 'category' && $editId > 0) {
+        $stmt = Database::connection()->prepare(
+            'SELECT id, team_id, parent_id, category_name, category_code, is_active
+             FROM risk_categories
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $stmt->execute(['id' => $editId]);
+        $editingCategory = $stmt->fetch() ?: null;
+    }
 } catch (Throwable) {
+    $teams = [];
+    $departments = [];
     $allTeamCategories = [];
 }
 
@@ -34,76 +84,107 @@ require __DIR__ . '/../partials/layout_top.php';
             <div>
                 <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Admin Master Data</div>
                 <h1 class="text-3xl font-bold text-slate-900">จัดการข้อมูลพื้นฐาน</h1>
-                <p class="mt-2 text-slate-600">ใช้สำหรับดูแลทีมนำ หน่วยงาน และประเภทความเสี่ยงของแต่ละทีมนำ</p>
+                <p class="mt-2 text-slate-600">ดูแลทีมนำ หน่วยงาน และประเภทความเสี่ยง พร้อมทั้งแก้ไขและเปิด/ปิดใช้งานข้อมูลเดิมได้จากหน้าจอนี้</p>
             </div>
-            <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
-                กลับ Dashboard
-            </a>
+            <div class="flex flex-wrap gap-3">
+                <a href="<?= e(base_url('admin/users.php')) ?>" class="rounded-xl bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800">
+                    จัดการผู้ใช้
+                </a>
+                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
+                    กลับ Dashboard
+                </a>
+            </div>
         </div>
 
         <div class="mt-8 grid gap-6 xl:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">เพิ่มทีมนำ</h2>
-                <form action="<?= e(base_url('actions/admin_save_team.php')) ?>" method="post" class="mt-4 space-y-4">
+                <h2 class="text-lg font-semibold text-slate-900"><?= $editingTeam ? 'แก้ไขทีมนำ' : 'เพิ่มทีมนำ' ?></h2>
+                <form action="<?= e(base_url($editingTeam ? 'actions/admin_update_team.php' : 'actions/admin_save_team.php')) ?>" method="post" class="mt-4 space-y-4">
                     <?= csrf_field() ?>
+                    <?php if ($editingTeam): ?>
+                        <input type="hidden" name="team_id" value="<?= e((string) $editingTeam['id']) ?>">
+                    <?php endif; ?>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">รหัสทีมนำ</label>
-                        <input name="team_code" type="text" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                        <input name="team_code" type="text" value="<?= e((string) ($editingTeam['team_code'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ชื่อทีมนำ</label>
-                        <input name="team_name" type="text" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                        <input name="team_name" type="text" value="<?= e((string) ($editingTeam['team_name'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">รายละเอียด</label>
-                        <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"></textarea>
+                        <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"><?= e((string) ($editingTeam['description'] ?? '')) ?></textarea>
                     </div>
-                    <button type="submit" class="w-full rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700">
-                        บันทึกทีมนำ
-                    </button>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" class="flex-1 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700">
+                            <?= $editingTeam ? 'บันทึกการแก้ไข' : 'บันทึกทีมนำ' ?>
+                        </button>
+                        <?php if ($editingTeam): ?>
+                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
+                                ยกเลิก
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </form>
             </div>
 
             <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">เพิ่มหน่วยงาน</h2>
-                <form action="<?= e(base_url('actions/admin_save_department.php')) ?>" method="post" class="mt-4 space-y-4">
+                <h2 class="text-lg font-semibold text-slate-900"><?= $editingDepartment ? 'แก้ไขหน่วยงาน' : 'เพิ่มหน่วยงาน' ?></h2>
+                <form action="<?= e(base_url($editingDepartment ? 'actions/admin_update_department.php' : 'actions/admin_save_department.php')) ?>" method="post" class="mt-4 space-y-4">
                     <?= csrf_field() ?>
+                    <?php if ($editingDepartment): ?>
+                        <input type="hidden" name="department_id" value="<?= e((string) $editingDepartment['id']) ?>">
+                    <?php endif; ?>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">รหัสหน่วยงาน</label>
-                        <input name="department_code" type="text" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                        <input name="department_code" type="text" value="<?= e((string) ($editingDepartment['department_code'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ชื่อหน่วยงาน</label>
-                        <input name="department_name" type="text" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                        <input name="department_name" type="text" value="<?= e((string) ($editingDepartment['department_name'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ประเภท</label>
                         <select name="department_type" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
-                            <option value="general">general</option>
-                            <option value="clinical">clinical</option>
-                            <option value="support">support</option>
+                            <?php $selectedDepartmentType = (string) ($editingDepartment['department_type'] ?? 'general'); ?>
+                            <option value="general" <?= $selectedDepartmentType === 'general' ? 'selected' : '' ?>>general</option>
+                            <option value="clinical" <?= $selectedDepartmentType === 'clinical' ? 'selected' : '' ?>>clinical</option>
+                            <option value="support" <?= $selectedDepartmentType === 'support' ? 'selected' : '' ?>>support</option>
                         </select>
                     </div>
                     <label class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                        <input name="is_nursing_group" type="checkbox" value="1" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <input name="is_nursing_group" type="checkbox" value="1" <?= (int) ($editingDepartment['is_nursing_group'] ?? 0) === 1 ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
                         เป็นกลุ่มงานการพยาบาล
                     </label>
-                    <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800">
-                        บันทึกหน่วยงาน
-                    </button>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" class="flex-1 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800">
+                            <?= $editingDepartment ? 'บันทึกการแก้ไข' : 'บันทึกหน่วยงาน' ?>
+                        </button>
+                        <?php if ($editingDepartment): ?>
+                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
+                                ยกเลิก
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </form>
             </div>
 
             <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">เพิ่มประเภทความเสี่ยงของทีมนำ</h2>
-                <form action="<?= e(base_url('actions/admin_save_team_category.php')) ?>" method="post" class="mt-4 space-y-4">
+                <h2 class="text-lg font-semibold text-slate-900"><?= $editingCategory ? 'แก้ไขประเภทความเสี่ยง' : 'เพิ่มประเภทความเสี่ยงของทีมนำ' ?></h2>
+                <form action="<?= e(base_url($editingCategory ? 'actions/admin_update_team_category.php' : 'actions/admin_save_team_category.php')) ?>" method="post" class="mt-4 space-y-4">
                     <?= csrf_field() ?>
+                    <?php if ($editingCategory): ?>
+                        <input type="hidden" name="category_id" value="<?= e((string) $editingCategory['id']) ?>">
+                    <?php endif; ?>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ทีมนำ</label>
                         <select name="team_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                             <option value="">เลือกทีมนำ</option>
                             <?php foreach ($teams as $team): ?>
-                                <option value="<?= e((string) $team['id']) ?>"><?= e((string) $team['team_code']) ?> - <?= e((string) $team['team_name']) ?></option>
+                                <option value="<?= e((string) $team['id']) ?>" <?= (int) ($editingCategory['team_id'] ?? 0) === (int) $team['id'] ? 'selected' : '' ?>>
+                                    <?= e((string) $team['team_code']) ?> - <?= e((string) $team['team_name']) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -112,7 +193,8 @@ require __DIR__ . '/../partials/layout_top.php';
                         <select name="parent_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
                             <option value="">ไม่มี (ระดับบนสุด)</option>
                             <?php foreach ($allTeamCategories as $category): ?>
-                                <option value="<?= e((string) $category['id']) ?>">
+                                <?php if ($editingCategory && (int) $editingCategory['id'] === (int) $category['id']) { continue; } ?>
+                                <option value="<?= e((string) $category['id']) ?>" <?= (int) ($editingCategory['parent_id'] ?? 0) === (int) $category['id'] ? 'selected' : '' ?>>
                                     <?= e((string) $category['team_code']) ?> - <?= e((string) $category['category_name']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -120,15 +202,22 @@ require __DIR__ . '/../partials/layout_top.php';
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">รหัสประเภท</label>
-                        <input name="category_code" type="text" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                        <input name="category_code" type="text" value="<?= e((string) ($editingCategory['category_code'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ชื่อประเภท</label>
-                        <input name="category_name" type="text" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                        <input name="category_name" type="text" value="<?= e((string) ($editingCategory['category_name'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                     </div>
-                    <button type="submit" class="w-full rounded-xl bg-amber-500 px-4 py-3 font-semibold text-slate-900 transition hover:bg-amber-400">
-                        บันทึกประเภทความเสี่ยง
-                    </button>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" class="flex-1 rounded-xl bg-amber-500 px-4 py-3 font-semibold text-slate-900 transition hover:bg-amber-400">
+                            <?= $editingCategory ? 'บันทึกการแก้ไข' : 'บันทึกประเภทความเสี่ยง' ?>
+                        </button>
+                        <?php if ($editingCategory): ?>
+                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
+                                ยกเลิก
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </form>
             </div>
         </div>
@@ -139,10 +228,26 @@ require __DIR__ . '/../partials/layout_top.php';
                 <div class="mt-4 space-y-3">
                     <?php foreach ($teams as $team): ?>
                         <div class="rounded-xl bg-slate-50 p-4">
-                            <div class="font-semibold text-slate-900"><?= e((string) $team['team_code']) ?> - <?= e((string) $team['team_name']) ?></div>
-                            <?php if (!empty($team['description'])): ?>
-                                <div class="mt-1 text-sm text-slate-500"><?= e((string) $team['description']) ?></div>
-                            <?php endif; ?>
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <div class="font-semibold text-slate-900"><?= e((string) $team['team_code']) ?> - <?= e((string) $team['team_name']) ?></div>
+                                    <?php if (!empty($team['description'])): ?>
+                                        <div class="mt-1 text-sm text-slate-500"><?= e((string) $team['description']) ?></div>
+                                    <?php endif; ?>
+                                    <div class="mt-2 text-xs text-slate-500"><?= (int) $team['is_active'] === 1 ? 'ใช้งาน' : 'ปิดใช้งาน' ?></div>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="<?= e(base_url('admin/master_data.php?edit_type=team&edit_id=' . $team['id'])) ?>" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">แก้ไข</a>
+                                    <form action="<?= e(base_url('actions/admin_toggle_team_status.php')) ?>" method="post">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="team_id" value="<?= e((string) $team['id']) ?>">
+                                        <input type="hidden" name="current_status" value="<?= e((string) $team['is_active']) ?>">
+                                        <button type="submit" class="rounded-lg <?= (int) $team['is_active'] === 1 ? 'bg-rose-600' : 'bg-emerald-600' ?> px-3 py-2 text-xs font-semibold text-white">
+                                            <?= (int) $team['is_active'] === 1 ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -153,13 +258,29 @@ require __DIR__ . '/../partials/layout_top.php';
                 <div class="mt-4 space-y-3">
                     <?php foreach ($departments as $department): ?>
                         <div class="rounded-xl bg-slate-50 p-4">
-                            <div class="font-semibold text-slate-900"><?= e((string) $department['department_name']) ?></div>
-                            <div class="mt-1 text-xs text-slate-500">
-                                <?= e((string) ($department['department_code'] ?: '-')) ?>
-                                | <?= e((string) ($department['department_type'] ?: 'general')) ?>
-                                <?php if ((int) ($department['is_nursing_group'] ?? 0) === 1): ?>
-                                    | กลุ่มการพยาบาล
-                                <?php endif; ?>
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <div class="font-semibold text-slate-900"><?= e((string) $department['department_name']) ?></div>
+                                    <div class="mt-1 text-xs text-slate-500">
+                                        <?= e((string) ($department['department_code'] ?: '-')) ?>
+                                        | <?= e((string) ($department['department_type'] ?: 'general')) ?>
+                                        <?php if ((int) ($department['is_nursing_group'] ?? 0) === 1): ?>
+                                            | กลุ่มการพยาบาล
+                                        <?php endif; ?>
+                                        | <?= (int) $department['is_active'] === 1 ? 'ใช้งาน' : 'ปิดใช้งาน' ?>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="<?= e(base_url('admin/master_data.php?edit_type=department&edit_id=' . $department['id'])) ?>" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">แก้ไข</a>
+                                    <form action="<?= e(base_url('actions/admin_toggle_department_status.php')) ?>" method="post">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="department_id" value="<?= e((string) $department['id']) ?>">
+                                        <input type="hidden" name="current_status" value="<?= e((string) $department['is_active']) ?>">
+                                        <button type="submit" class="rounded-lg <?= (int) $department['is_active'] === 1 ? 'bg-rose-600' : 'bg-emerald-600' ?> px-3 py-2 text-xs font-semibold text-white">
+                                            <?= (int) $department['is_active'] === 1 ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -171,8 +292,27 @@ require __DIR__ . '/../partials/layout_top.php';
                 <div class="mt-4 space-y-3">
                     <?php foreach ($allTeamCategories as $category): ?>
                         <div class="rounded-xl bg-slate-50 p-4">
-                            <div class="font-semibold text-slate-900"><?= e((string) $category['team_code']) ?> - <?= e((string) $category['category_name']) ?></div>
-                            <div class="mt-1 text-xs text-slate-500"><?= e((string) ($category['category_code'] ?: '-')) ?></div>
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <div class="font-semibold text-slate-900"><?= e((string) $category['team_code']) ?> - <?= e((string) $category['category_name']) ?></div>
+                                    <div class="mt-1 text-xs text-slate-500">
+                                        <?= e((string) ($category['category_code'] ?: '-')) ?>
+                                        | parent <?= e((string) ($category['parent_id'] ?: '-')) ?>
+                                        | <?= (int) $category['is_active'] === 1 ? 'ใช้งาน' : 'ปิดใช้งาน' ?>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="<?= e(base_url('admin/master_data.php?edit_type=category&edit_id=' . $category['id'])) ?>" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">แก้ไข</a>
+                                    <form action="<?= e(base_url('actions/admin_toggle_team_category_status.php')) ?>" method="post">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="category_id" value="<?= e((string) $category['id']) ?>">
+                                        <input type="hidden" name="current_status" value="<?= e((string) $category['is_active']) ?>">
+                                        <button type="submit" class="rounded-lg <?= (int) $category['is_active'] === 1 ? 'bg-rose-600' : 'bg-emerald-600' ?> px-3 py-2 text-xs font-semibold text-white">
+                                            <?= (int) $category['is_active'] === 1 ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>

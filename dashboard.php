@@ -86,6 +86,7 @@ require __DIR__ . '/partials/layout_top.php';
                         <a href="<?= e(base_url('admin/settings_public_access.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">ตั้งค่า password กลาง</a>
                         <a href="<?= e(base_url('admin/reports.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการรายงานความเสี่ยง</a>
                         <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการข้อมูลพื้นฐาน</a>
+                        <a href="<?= e(base_url('admin/users.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการผู้ใช้ระบบ</a>
                     <?php endif; ?>
                     <?php if (Auth::hasRole('TEAM_LEAD')): ?>
                         <a href="<?= e(base_url('team/reports.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">งานของทีมนำ</a>

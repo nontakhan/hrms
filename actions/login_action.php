@@ -21,7 +21,16 @@ if ($username === '' || $password === '') {
 
 try {
     $sql = <<<SQL
-        SELECT u.id, u.username, u.password_hash, u.full_name, r.role_code, r.role_name
+        SELECT
+            u.id,
+            u.username,
+            u.password_hash,
+            u.full_name,
+            u.department_id,
+            u.team_id,
+            u.head_level,
+            r.role_code,
+            r.role_name
         FROM users u
         INNER JOIN roles r ON r.id = u.role_id
         WHERE u.username = :username AND u.is_active = 1

@@ -1,6 +1,16 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+INSERT INTO `roles` (`id`, `role_code`, `role_name`)
+VALUES
+    (1, 'ADMIN', 'ผู้ดูแลระบบ'),
+    (2, 'TEAM_LEAD', 'ทีมนำ'),
+    (3, 'DEPARTMENT_HEAD', 'หัวหน้ากลุ่มงาน/หัวหน้างาน'),
+    (4, 'DIRECTOR', 'ผู้อำนวยการ')
+ON DUPLICATE KEY UPDATE
+    `role_code` = VALUES(`role_code`),
+    `role_name` = VALUES(`role_name`);
+
 INSERT INTO `fiscal_years` (`id`, `year_label`, `year_short`, `date_start`, `date_end`, `is_active`)
 VALUES
     (1, '2569', '69', '2025-10-01', '2026-09-30', 1)
