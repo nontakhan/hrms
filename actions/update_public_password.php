@@ -26,11 +26,24 @@ if ($password !== $passwordConfirm) {
 
 try {
     $user = Auth::user();
+    $userId = isset($user['id']) ? (int) $user['id'] : null;
+
     upsert_setting(
         'public_report_password_hash',
         password_hash($password, PASSWORD_DEFAULT),
-        isset($user['id']) ? (int) $user['id'] : null,
+        $userId,
         'Hash password for public report access'
+    );
+
+    audit_log(
+        'admin_update_public_report_password',
+        'system_setting',
+        'public_report_password_hash',
+        [
+            'setting_key' => 'public_report_password_hash',
+            'password_changed' => true,
+        ],
+        $userId
     );
 
     flash_set('success', 'บันทึก password กลางเรียบร้อย');

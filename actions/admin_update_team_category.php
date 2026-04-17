@@ -17,6 +17,7 @@ $parentId = (int) ($_POST['parent_id'] ?? 0);
 $categoryCode = trim((string) ($_POST['category_code'] ?? ''));
 $categoryName = trim((string) ($_POST['category_name'] ?? ''));
 $sortOrder = max(1, (int) ($_POST['sort_order'] ?? 1));
+$actorId = (int) (Auth::user()['id'] ?? 0);
 
 if ($categoryId <= 0 || $teamId <= 0 || $categoryName === '') {
     flash_set('error', 'กรุณากรอกข้อมูลประเภทความเสี่ยงให้ครบ');
@@ -25,6 +26,20 @@ if ($categoryId <= 0 || $teamId <= 0 || $categoryName === '') {
 
 try {
     $pdo = Database::connection();
+    $existingStmt = $pdo->prepare(
+        'SELECT team_id, parent_id, category_name, category_code, sort_order
+         FROM risk_categories
+         WHERE id = :id
+         LIMIT 1'
+    );
+    $existingStmt->execute(['id' => $categoryId]);
+    $existingCategory = $existingStmt->fetch();
+
+    if (!$existingCategory) {
+        flash_set('error', 'ไม่พบประเภทความเสี่ยงที่ต้องการแก้ไข');
+        redirect('/admin/master_data.php');
+    }
+
     $resolvedParentId = null;
 
     if ($parentId > 0) {
@@ -70,6 +85,30 @@ try {
         'sort_order' => $sortOrder,
         'id' => $categoryId,
     ]);
+
+    audit_log(
+        'admin_update_team_category',
+        'risk_category',
+        $categoryId,
+        [
+            'before' => [
+                'team_id' => (int) $existingCategory['team_id'],
+                'parent_id' => $existingCategory['parent_id'] !== null ? (int) $existingCategory['parent_id'] : null,
+                'category_name' => $existingCategory['category_name'],
+                'category_code' => $existingCategory['category_code'],
+                'sort_order' => (int) $existingCategory['sort_order'],
+            ],
+            'after' => [
+                'team_id' => $teamId,
+                'parent_id' => $resolvedParentId,
+                'category_name' => $categoryName,
+                'category_code' => $categoryCode !== '' ? strtoupper($categoryCode) : null,
+                'sort_order' => $sortOrder,
+            ],
+        ],
+        $actorId,
+        $pdo
+    );
 
     flash_set('success', 'บันทึกการแก้ไขประเภทความเสี่ยงเรียบร้อย');
 } catch (Throwable) {

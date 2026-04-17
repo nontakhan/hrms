@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf($_POST['csrf_token'] ?
 
 $user = Auth::user();
 $teamId = (int) ($user['team_id'] ?? 0);
+$userId = (int) ($user['id'] ?? 0);
 $categoryId = (int) ($_POST['category_id'] ?? 0);
 $parentId = (int) ($_POST['parent_id'] ?? 0);
 $categoryCode = strtoupper(trim((string) ($_POST['category_code'] ?? '')));
@@ -28,7 +29,7 @@ try {
     $pdo = Database::connection();
 
     $categoryStmt = $pdo->prepare(
-        'SELECT id
+        'SELECT id, parent_id, category_name, category_code, sort_order
          FROM risk_categories
          WHERE id = :id AND team_id = :team_id
          LIMIT 1'
@@ -37,8 +38,9 @@ try {
         'id' => $categoryId,
         'team_id' => $teamId,
     ]);
+    $existingCategory = $categoryStmt->fetch();
 
-    if (!$categoryStmt->fetch()) {
+    if (!$existingCategory) {
         flash_set('error', 'ไม่พบประเภทความเสี่ยงที่ต้องการแก้ไข');
         redirect('/team/categories.php');
     }
@@ -87,6 +89,28 @@ try {
         'id' => $categoryId,
         'team_id' => $teamId,
     ]);
+
+    audit_log(
+        'team_update_category',
+        'risk_category',
+        $categoryId,
+        [
+            'before' => [
+                'parent_id' => $existingCategory['parent_id'] !== null ? (int) $existingCategory['parent_id'] : null,
+                'category_name' => $existingCategory['category_name'],
+                'category_code' => $existingCategory['category_code'],
+                'sort_order' => (int) $existingCategory['sort_order'],
+            ],
+            'after' => [
+                'parent_id' => $resolvedParentId,
+                'category_name' => $categoryName,
+                'category_code' => $categoryCode !== '' ? $categoryCode : null,
+                'sort_order' => $sortOrder,
+            ],
+        ],
+        $userId,
+        $pdo
+    );
 
     flash_set('success', 'บันทึกการแก้ไขประเภทความเสี่ยงเรียบร้อย');
 } catch (Throwable) {

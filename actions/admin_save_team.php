@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf($_POST['csrf_token'] ?
 $teamCode = strtoupper(trim((string) ($_POST['team_code'] ?? '')));
 $teamName = trim((string) ($_POST['team_name'] ?? ''));
 $description = trim((string) ($_POST['description'] ?? ''));
+$actorId = (int) (Auth::user()['id'] ?? 0);
 
 if ($teamCode === '' || $teamName === '') {
     flash_set('error', 'กรุณากรอกรหัสทีมนำและชื่อทีมนำให้ครบ');
@@ -21,7 +22,8 @@ if ($teamCode === '' || $teamName === '') {
 }
 
 try {
-    $stmt = Database::connection()->prepare(
+    $pdo = Database::connection();
+    $stmt = $pdo->prepare(
         'INSERT INTO teams (team_code, team_name, description, is_active)
          VALUES (:team_code, :team_name, :description, 1)'
     );
@@ -30,6 +32,21 @@ try {
         'team_name' => $teamName,
         'description' => $description !== '' ? $description : null,
     ]);
+
+    $teamId = (int) $pdo->lastInsertId();
+    audit_log(
+        'admin_create_team',
+        'team',
+        $teamId,
+        [
+            'team_code' => $teamCode,
+            'team_name' => $teamName,
+            'description' => $description !== '' ? $description : null,
+            'is_active' => 1,
+        ],
+        $actorId,
+        $pdo
+    );
 
     flash_set('success', 'บันทึกข้อมูลทีมนำเรียบร้อย');
 } catch (Throwable $exception) {

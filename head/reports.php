@@ -20,7 +20,7 @@ if ($userId <= 0) {
 
 try {
     $sql = <<<SQL
-        SELECT
+        SELECT DISTINCT
             ra.id AS assignment_id,
             ra.assignment_no,
             ra.assignment_status,
@@ -35,14 +35,24 @@ try {
             sl.level_code,
             d.department_name,
             t.team_code,
-            t.team_name
+            t.team_name,
+            CASE
+                WHEN ra.target_head_user_id = :user_id THEN 'direct'
+                ELSE COALESCE(tdv.visibility_type, 'supervisor')
+            END AS access_type
         FROM report_assignments ra
         INNER JOIN incident_reports ir ON ir.id = ra.report_id
         INNER JOIN incident_types it ON it.id = ir.incident_type_id
         INNER JOIN severity_levels sl ON sl.id = ir.current_severity_id
         INNER JOIN departments d ON d.id = ir.incident_department_id
         INNER JOIN teams t ON t.id = ra.target_team_id
+        LEFT JOIN team_department_visibility tdv
+            ON tdv.team_id = ra.target_team_id
+           AND tdv.department_id = ir.incident_department_id
+           AND tdv.viewer_user_id = :user_id
+           AND tdv.is_active = 1
         WHERE ra.target_head_user_id = :user_id
+           OR tdv.id IS NOT NULL
         ORDER BY ra.id DESC
     SQL;
 
@@ -61,7 +71,7 @@ require __DIR__ . '/../partials/layout_top.php';
             <div>
                 <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Department Head Queue</div>
                 <h1 class="text-3xl font-bold text-slate-900">งานของหัวหน้ากลุ่มงาน/หัวหน้างาน</h1>
-                <p class="mt-2 text-slate-600">รายการรายงานที่ทีมนำส่งต่อมาเพื่อให้พิจารณาและบันทึกแนวทางแก้ไข</p>
+                <p class="mt-2 text-slate-600">รายการรายงานที่ทีมนำส่งต่อมาโดยตรง และรายการที่ได้รับสิทธิ์มองเห็นเพิ่มเติมจากการตั้งค่า workflow</p>
             </div>
             <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
                 กลับ Dashboard
@@ -79,6 +89,7 @@ require __DIR__ . '/../partials/layout_top.php';
                         <th>ประเภท</th>
                         <th>ระดับ</th>
                         <th>หน่วยงาน</th>
+                        <th>การเข้าถึง</th>
                         <th>สถานะงาน</th>
                         <th>วันที่ส่งต่อ</th>
                         <th>จัดการ</th>
@@ -94,6 +105,11 @@ require __DIR__ . '/../partials/layout_top.php';
                             <td><?= e((string) $report['type_name']) ?></td>
                             <td><?= e((string) $report['level_code']) ?></td>
                             <td><?= e((string) $report['department_name']) ?></td>
+                            <td>
+                                <span class="rounded-full px-3 py-1 text-xs font-semibold <?= $report['access_type'] === 'direct' ? 'bg-brand-100 text-brand-700' : 'bg-amber-100 text-amber-700' ?>">
+                                    <?= $report['access_type'] === 'direct' ? 'รับตรง' : 'เห็นเพิ่ม' ?>
+                                </span>
+                            </td>
                             <td><?= e((string) $report['assignment_status']) ?></td>
                             <td><?= e((string) $report['assigned_at']) ?></td>
                             <td>
@@ -124,7 +140,7 @@ require __DIR__ . '/../partials/layout_top.php';
     $(function () {
         $('#headReportsTable').DataTable({
             pageLength: 10,
-            order: [[8, 'desc']],
+            order: [[9, 'desc']],
             language: {
                 search: 'ค้นหา:',
                 lengthMenu: 'แสดง _MENU_ รายการ',

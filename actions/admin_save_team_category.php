@@ -84,6 +84,23 @@ try {
         'created_by' => $userId > 0 ? $userId : null,
     ]);
 
+    $categoryId = (int) $pdo->lastInsertId();
+    audit_log(
+        'admin_create_team_category',
+        'risk_category',
+        $categoryId,
+        [
+            'team_id' => $teamId,
+            'parent_id' => $resolvedParentId,
+            'category_name' => $categoryName,
+            'category_code' => $categoryCode !== '' ? strtoupper($categoryCode) : null,
+            'sort_order' => $sortOrder,
+            'is_active' => 1,
+        ],
+        $userId,
+        $pdo
+    );
+
     flash_set('success', 'บันทึกประเภทความเสี่ยงของทีมนำเรียบร้อย');
 } catch (Throwable) {
     flash_set('error', 'ไม่สามารถบันทึกประเภทความเสี่ยงได้');

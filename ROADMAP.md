@@ -48,6 +48,9 @@
 - เพิ่มคลิกที่กราฟบน dashboard ผอ. เพื่อเปิดรายการที่กรองตามระดับความรุนแรงและทีมนำ
 - เพิ่ม hardening ฝั่ง action สำหรับตรวจสถานะ assignment/report และ validate ข้อมูลก่อนบันทึก
 - เพิ่ม audit log สำหรับ action สำคัญของ admin, ทีมนำ, และหัวหน้ากลุ่มงาน/หัวหน้างาน
+- เพิ่ม audit log สำหรับหลังบ้านฝั่งผู้ใช้ระบบ, system settings, ทีมนำ, หน่วยงาน, และ category
+- เพิ่ม business rule กันการปิดใช้งาน master data ที่ยังถูกใช้งานใน workflow และ category review history
+- เพิ่มหน้าตั้งค่า workflow สำหรับปีงบประมาณที่ active และ visibility การมองเห็นเคสข้ามหัวหน้า
 
 ## In Progress
 
@@ -67,6 +70,9 @@
 - เตรียมต่อยอด chart/dashboard ให้คลิกกราฟแล้วเปิดรายการที่กรองไว้ได้
 - เตรียมต่อยอด admin report queue ให้รองรับ drill-down เชิงลึกและตัวกรองเพิ่มขึ้น
 - เตรียมต่อยอด audit log ให้ครอบคลุม master data, ผู้ใช้ระบบ, และการตั้งค่าหลังบ้าน
+- เตรียมต่อยอด audit log ให้ครอบคลุมฝั่งทีมนำจัดการ category ของตัวเองและการตั้งค่าปีงบประมาณ
+- เตรียมต่อยอด validation สำหรับ hierarchy และ dependency ที่ซับซ้อนขึ้น เช่น parent-child หลายชั้นและหน่วยงานในสายบังคับบัญชา
+- เตรียมต่อยอดหน้าจอจัดการ visibility ให้แก้ไข/ปิดใช้งานรายการเดิมได้จากหน้าหลังบ้าน
 
 ## Next
 
@@ -86,6 +92,9 @@
 - เพิ่ม filter เชิงลึกใน admin report queue เพื่อรองรับ drill-down จาก dashboard ได้ครบ
 - เพิ่ม hardening เชิงสิทธิ์และ validation เพิ่มเติมใน action ฝั่งหลังบ้าน
 - เพิ่ม audit log ในจุดแก้ไข master data, ผู้ใช้, และ system settings
+- เพิ่ม business rule validation สำหรับการปิดใช้งานข้อมูลที่ถูกใช้งานอยู่ใน workflow จริง
+- เพิ่มสิทธิ์และ audit log สำหรับการตั้งค่าปีงบประมาณ/เลขรัน และการจัดการ visibility เฉพาะกลุ่มพยาบาล
+- เชื่อมการมองเห็นคิวงานหัวหน้ากับตาราง visibility เพื่อรองรับกรณีหัวหน้ากลุ่มงานพยาบาลเห็นเคสของหัวหน้างาน
 
 ## Pending Milestones
 

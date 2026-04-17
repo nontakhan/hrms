@@ -26,10 +26,19 @@ if ($userId <= 0 || $username === '' || $fullName === '' || $roleId <= 0) {
 
 try {
     $pdo = Database::connection();
+    $actor = Auth::user();
+    $actorId = isset($actor['id']) ? (int) $actor['id'] : null;
 
-    $existingStmt = $pdo->prepare('SELECT id FROM users WHERE id = :id LIMIT 1');
+    $existingStmt = $pdo->prepare(
+        'SELECT id, username, full_name, role_id, department_id, team_id, head_level
+         FROM users
+         WHERE id = :id
+         LIMIT 1'
+    );
     $existingStmt->execute(['id' => $userId]);
-    if (!$existingStmt->fetch()) {
+    $existingUser = $existingStmt->fetch();
+
+    if (!$existingUser) {
         flash_set('error', 'ไม่พบผู้ใช้ที่ต้องการแก้ไข');
         redirect('/admin/users.php');
     }
@@ -84,6 +93,33 @@ try {
         'head_level' => $resolvedHeadLevel,
         'id' => $userId,
     ]);
+
+    audit_log(
+        'admin_update_user',
+        'user',
+        $userId,
+        [
+            'before' => [
+                'username' => $existingUser['username'],
+                'full_name' => $existingUser['full_name'],
+                'role_id' => (int) $existingUser['role_id'],
+                'department_id' => $existingUser['department_id'] !== null ? (int) $existingUser['department_id'] : null,
+                'team_id' => $existingUser['team_id'] !== null ? (int) $existingUser['team_id'] : null,
+                'head_level' => $existingUser['head_level'],
+            ],
+            'after' => [
+                'username' => $username,
+                'full_name' => $fullName,
+                'role_id' => $roleId,
+                'role_code' => $roleCode,
+                'department_id' => $resolvedDepartmentId,
+                'team_id' => $resolvedTeamId,
+                'head_level' => $resolvedHeadLevel,
+            ],
+        ],
+        $actorId,
+        $pdo
+    );
 
     flash_set('success', 'บันทึกการแก้ไขผู้ใช้เรียบร้อย');
 } catch (Throwable $exception) {

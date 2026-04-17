@@ -400,6 +400,63 @@ function fetch_department_heads(): array
     }
 }
 
+function fetch_department_head_users(bool $includeInactive = false): array
+{
+    try {
+        $sql = "SELECT
+                    u.id,
+                    u.full_name,
+                    u.head_level,
+                    u.is_active,
+                    u.department_id,
+                    d.department_name
+                FROM users u
+                LEFT JOIN departments d ON d.id = u.department_id
+                INNER JOIN roles r ON r.id = u.role_id
+                WHERE r.role_code = 'DEPARTMENT_HEAD'";
+
+        if (!$includeInactive) {
+            $sql .= ' AND u.is_active = 1';
+        }
+
+        $sql .= ' ORDER BY d.department_name ASC, u.full_name ASC';
+
+        $stmt = Database::connection()->query($sql);
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function fetch_team_department_visibility_entries(): array
+{
+    try {
+        $stmt = Database::connection()->query(
+            "SELECT
+                tdv.id,
+                tdv.team_id,
+                tdv.department_id,
+                tdv.viewer_user_id,
+                tdv.visibility_type,
+                tdv.is_active,
+                t.team_code,
+                t.team_name,
+                d.department_name,
+                u.full_name AS viewer_name
+             FROM team_department_visibility tdv
+             INNER JOIN teams t ON t.id = tdv.team_id
+             INNER JOIN departments d ON d.id = tdv.department_id
+             INNER JOIN users u ON u.id = tdv.viewer_user_id
+             ORDER BY tdv.is_active DESC, t.team_code ASC, d.department_name ASC, u.full_name ASC"
+        );
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
 function fetch_report_severity_history(int $reportId): array
 {
     try {

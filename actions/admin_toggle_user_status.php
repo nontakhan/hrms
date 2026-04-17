@@ -26,8 +26,18 @@ if ($userId === $currentAdminId) {
 }
 
 try {
+    $pdo = Database::connection();
+    $userStmt = $pdo->prepare('SELECT username, is_active FROM users WHERE id = :id LIMIT 1');
+    $userStmt->execute(['id' => $userId]);
+    $targetUser = $userStmt->fetch();
+
+    if (!$targetUser) {
+        flash_set('error', 'ไม่พบผู้ใช้ที่ต้องการเปลี่ยนสถานะ');
+        redirect('/admin/users.php');
+    }
+
     $newStatus = $currentStatus === 1 ? 0 : 1;
-    $stmt = Database::connection()->prepare(
+    $stmt = $pdo->prepare(
         'UPDATE users
          SET is_active = :is_active, updated_at = NOW()
          WHERE id = :id'
@@ -36,6 +46,19 @@ try {
         'is_active' => $newStatus,
         'id' => $userId,
     ]);
+
+    audit_log(
+        'admin_toggle_user_status',
+        'user',
+        $userId,
+        [
+            'username' => $targetUser['username'],
+            'old_status' => (int) $targetUser['is_active'],
+            'new_status' => $newStatus,
+        ],
+        $currentAdminId,
+        $pdo
+    );
 
     flash_set('success', $newStatus === 1 ? 'เปิดใช้งานผู้ใช้เรียบร้อย' : 'ปิดใช้งานผู้ใช้เรียบร้อย');
 } catch (Throwable) {

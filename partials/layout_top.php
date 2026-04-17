@@ -14,6 +14,7 @@ if ($roleCode === 'ADMIN') {
         ['label' => 'รายงาน', 'href' => base_url('admin/reports.php')],
         ['label' => 'ผู้ใช้', 'href' => base_url('admin/users.php')],
         ['label' => 'Master Data', 'href' => base_url('admin/master_data.php')],
+        ['label' => 'Workflow Settings', 'href' => base_url('admin/settings_workflow.php')],
         ['label' => 'Password กลาง', 'href' => base_url('admin/settings_public_access.php')],
     ];
 } elseif ($roleCode === 'TEAM_LEAD') {
@@ -78,7 +79,12 @@ if ($roleCode === 'ADMIN') {
             <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <div class="text-lg font-bold text-slate-900"><?= e((string) app_config('app_name', 'HRMS2')) ?></div>
-                    <div class="text-sm text-slate-500"><?= e((string) ($authUser['full_name'] ?? '')) ?><?php if (!empty($authUser['role_name'])): ?> | <?= e((string) $authUser['role_name']) ?><?php endif; ?></div>
+                    <div class="text-sm text-slate-500">
+                        <?= e((string) ($authUser['full_name'] ?? '')) ?>
+                        <?php if (!empty($authUser['role_name'])): ?>
+                            | <?= e((string) $authUser['role_name']) ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="flex flex-col gap-3 lg:items-end">
                     <nav class="flex flex-wrap gap-2">

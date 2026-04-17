@@ -31,6 +31,8 @@ if (strlen($password) < 6) {
 
 try {
     $pdo = Database::connection();
+    $actor = Auth::user();
+    $actorId = isset($actor['id']) ? (int) $actor['id'] : null;
 
     $roleStmt = $pdo->prepare('SELECT id, role_code FROM roles WHERE id = :id LIMIT 1');
     $roleStmt->execute(['id' => $roleId]);
@@ -78,6 +80,25 @@ try {
         'team_id' => $resolvedTeamId,
         'head_level' => $resolvedHeadLevel,
     ]);
+
+    $newUserId = (int) $pdo->lastInsertId();
+
+    audit_log(
+        'admin_create_user',
+        'user',
+        $newUserId,
+        [
+            'username' => $username,
+            'full_name' => $fullName,
+            'role_id' => $roleId,
+            'role_code' => $roleCode,
+            'department_id' => $resolvedDepartmentId,
+            'team_id' => $resolvedTeamId,
+            'head_level' => $resolvedHeadLevel,
+        ],
+        $actorId,
+        $pdo
+    );
 
     flash_set('success', 'บันทึกผู้ใช้ใหม่เรียบร้อย');
 } catch (Throwable $exception) {
