@@ -106,7 +106,7 @@ function fetch_all_departments(): array
 {
     try {
         $stmt = Database::connection()->query(
-            'SELECT id, department_name
+            'SELECT id, department_code, department_name, department_type, parent_department_id, is_nursing_group
              FROM departments
              WHERE is_active = 1
              ORDER BY department_name ASC'
@@ -122,7 +122,7 @@ function fetch_all_teams(): array
 {
     try {
         $stmt = Database::connection()->query(
-            'SELECT id, team_code, team_name
+            'SELECT id, team_code, team_name, description
              FROM teams
              WHERE is_active = 1
              ORDER BY team_code ASC, team_name ASC'
@@ -240,6 +240,61 @@ function fetch_department_heads(): array
                AND r.role_code = 'DEPARTMENT_HEAD'
              ORDER BY d.department_name ASC, u.full_name ASC"
         );
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function fetch_report_severity_history(int $reportId): array
+{
+    try {
+        $stmt = Database::connection()->prepare(
+            'SELECT
+                rsh.changed_at,
+                rsh.changed_role_code,
+                rsh.change_reason,
+                old_sl.level_code AS old_level_code,
+                new_sl.level_code AS new_level_code,
+                u.full_name
+             FROM report_severity_histories rsh
+             LEFT JOIN severity_levels old_sl ON old_sl.id = rsh.old_severity_id
+             LEFT JOIN severity_levels new_sl ON new_sl.id = rsh.new_severity_id
+             LEFT JOIN users u ON u.id = rsh.changed_by_user_id
+             WHERE rsh.report_id = :report_id
+             ORDER BY rsh.id DESC'
+        );
+        $stmt->execute(['report_id' => $reportId]);
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function fetch_assignment_route_logs(int $assignmentId): array
+{
+    try {
+        $stmt = Database::connection()->prepare(
+            'SELECT
+                arl.created_at,
+                arl.route_action,
+                arl.route_reason,
+                arl.route_note,
+                from_user.full_name AS from_user_name,
+                to_user.full_name AS to_user_name,
+                t.team_code,
+                d.department_name
+             FROM assignment_route_logs arl
+             LEFT JOIN users from_user ON from_user.id = arl.from_user_id
+             LEFT JOIN users to_user ON to_user.id = arl.to_user_id
+             LEFT JOIN teams t ON t.id = arl.to_team_id
+             LEFT JOIN departments d ON d.id = arl.to_department_id
+             WHERE arl.assignment_id = :assignment_id
+             ORDER BY arl.id DESC'
+        );
+        $stmt->execute(['assignment_id' => $assignmentId]);
 
         return $stmt->fetchAll();
     } catch (Throwable) {

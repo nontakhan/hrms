@@ -60,9 +60,14 @@ require __DIR__ . '/../partials/layout_top.php';
                 <h1 class="text-3xl font-bold text-slate-900">งานของทีมนำ</h1>
                 <p class="mt-2 text-slate-600">รายการรายงานที่ถูกส่งต่อมาให้ทีมนำของคุณพิจารณา</p>
             </div>
-            <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
-                กลับ Dashboard
-            </a>
+            <div class="flex flex-wrap gap-3">
+                <a href="<?= e(base_url('team/categories.php')) ?>" class="rounded-xl bg-brand-600 px-4 py-2 font-medium text-white transition hover:bg-brand-700">
+                    จัดการประเภทความเสี่ยง
+                </a>
+                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
+                    กลับ Dashboard
+                </a>
+            </div>
         </div>
 
         <div class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">

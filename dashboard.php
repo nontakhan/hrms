@@ -85,12 +85,17 @@ require __DIR__ . '/partials/layout_top.php';
                     <?php if (Auth::hasRole('ADMIN')): ?>
                         <a href="<?= e(base_url('admin/settings_public_access.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">ตั้งค่า password กลาง</a>
                         <a href="<?= e(base_url('admin/reports.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการรายงานความเสี่ยง</a>
+                        <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการข้อมูลพื้นฐาน</a>
                     <?php endif; ?>
                     <?php if (Auth::hasRole('TEAM_LEAD')): ?>
                         <a href="<?= e(base_url('team/reports.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">งานของทีมนำ</a>
+                        <a href="<?= e(base_url('team/categories.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">จัดการประเภทความเสี่ยงของทีมนำ</a>
                     <?php endif; ?>
                     <?php if (Auth::hasRole('DEPARTMENT_HEAD')): ?>
                         <a href="<?= e(base_url('head/reports.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">งานของหัวหน้ากลุ่มงาน/หัวหน้างาน</a>
+                    <?php endif; ?>
+                    <?php if (Auth::hasRole('DIRECTOR')): ?>
+                        <a href="<?= e(base_url('director/dashboard.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">Dashboard ผู้อำนวยการ</a>
                     <?php endif; ?>
                     <a href="<?= e(base_url('public/report_access.php')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">ทดสอบหน้ารายงานสาธารณะ</a>
                     <a href="<?= e(base_url('ROADMAP.md')) ?>" class="rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100">ดู Roadmap โครงการ</a>

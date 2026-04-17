@@ -22,6 +22,8 @@ $record = null;
 $categories = fetch_team_categories($teamId);
 $departmentHeads = fetch_department_heads();
 $review = null;
+$severityHistory = [];
+$routeLogs = [];
 
 try {
     $stmt = Database::connection()->prepare(
@@ -76,6 +78,9 @@ if (!$record) {
     redirect('/team/reports.php');
 }
 
+$severityHistory = fetch_report_severity_history((int) $record['report_id']);
+$routeLogs = fetch_assignment_route_logs($assignmentId);
+
 $severityOptions = fetch_severity_levels_by_type_code((string) $record['type_code']);
 
 require __DIR__ . '/../partials/layout_top.php';
@@ -129,6 +134,23 @@ require __DIR__ . '/../partials/layout_top.php';
                     <div class="mt-4 rounded-xl bg-slate-50 p-4">
                         <div class="text-sm text-slate-500">การแก้ไขเบื้องต้น</div>
                         <div class="mt-2 whitespace-pre-line leading-7 text-slate-700"><?= e((string) ($record['initial_action'] ?? '-')) ?></div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 p-6">
+                    <h2 class="text-lg font-semibold text-slate-900">ประวัติระดับความรุนแรง</h2>
+                    <div class="mt-4 space-y-3">
+                        <?php if ($severityHistory === []): ?>
+                            <div class="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-500">ยังไม่มีประวัติ</div>
+                        <?php else: ?>
+                            <?php foreach ($severityHistory as $history): ?>
+                                <div class="rounded-xl bg-slate-50 p-4">
+                                    <div class="font-semibold text-slate-900"><?= e((string) ($history['old_level_code'] ?: '-')) ?> -> <?= e((string) ($history['new_level_code'] ?: '-')) ?></div>
+                                    <div class="mt-1 text-sm text-slate-600"><?= e((string) ($history['full_name'] ?: $history['changed_role_code'])) ?> | <?= e((string) $history['changed_at']) ?></div>
+                                    <div class="mt-2 text-sm leading-7 text-slate-700"><?= e((string) ($history['change_reason'] ?: '-')) ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -208,6 +230,24 @@ require __DIR__ . '/../partials/layout_top.php';
                             บันทึกผลการพิจารณา
                         </button>
                     </form>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 p-6">
+                    <h2 class="text-lg font-semibold text-slate-900">เส้นทางการส่งต่อ</h2>
+                    <div class="mt-4 space-y-3">
+                        <?php if ($routeLogs === []): ?>
+                            <div class="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-500">ยังไม่มี route log</div>
+                        <?php else: ?>
+                            <?php foreach ($routeLogs as $route): ?>
+                                <div class="rounded-xl bg-slate-50 p-4">
+                                    <div class="font-semibold text-slate-900"><?= e((string) $route['route_action']) ?></div>
+                                    <div class="mt-1 text-sm text-slate-600"><?= e((string) ($route['from_user_name'] ?: '-')) ?> | <?= e((string) $route['created_at']) ?></div>
+                                    <div class="mt-2 text-sm leading-7 text-slate-700">เหตุผล: <?= e((string) ($route['route_reason'] ?: '-')) ?></div>
+                                    <div class="mt-1 text-xs text-slate-500"><?= e((string) ($route['route_note'] ?: '')) ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>

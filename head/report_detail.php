@@ -20,6 +20,7 @@ $flashError = flash_get('error');
 $flashSuccess = flash_get('success');
 $record = null;
 $review = null;
+$routeLogs = [];
 
 try {
     $stmt = Database::connection()->prepare(
@@ -74,6 +75,8 @@ if (!$record) {
     redirect('/head/reports.php');
 }
 
+$routeLogs = fetch_assignment_route_logs($assignmentId);
+
 require __DIR__ . '/../partials/layout_top.php';
 ?>
 <main class="mx-auto max-w-7xl px-6 py-8 lg:py-12">
@@ -125,6 +128,24 @@ require __DIR__ . '/../partials/layout_top.php';
                     <div class="mt-4 rounded-xl bg-slate-50 p-4">
                         <div class="text-sm text-slate-500">การแก้ไขเบื้องต้น</div>
                         <div class="mt-2 whitespace-pre-line leading-7 text-slate-700"><?= e((string) ($record['initial_action'] ?? '-')) ?></div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 p-6">
+                    <h2 class="text-lg font-semibold text-slate-900">เส้นทางการส่งต่อ</h2>
+                    <div class="mt-4 space-y-3">
+                        <?php if ($routeLogs === []): ?>
+                            <div class="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-500">ยังไม่มี route log</div>
+                        <?php else: ?>
+                            <?php foreach ($routeLogs as $route): ?>
+                                <div class="rounded-xl bg-slate-50 p-4">
+                                    <div class="font-semibold text-slate-900"><?= e((string) $route['route_action']) ?></div>
+                                    <div class="mt-1 text-sm text-slate-600"><?= e((string) ($route['from_user_name'] ?: '-')) ?> | <?= e((string) $route['created_at']) ?></div>
+                                    <div class="mt-2 text-sm leading-7 text-slate-700">เหตุผล: <?= e((string) ($route['route_reason'] ?: '-')) ?></div>
+                                    <div class="mt-1 text-xs text-slate-500"><?= e((string) ($route['route_note'] ?: '')) ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

@@ -22,6 +22,8 @@ $teams = fetch_all_teams();
 $incidentTypes = fetch_incident_types();
 $departments = fetch_all_departments();
 $severityOptions = fetch_severity_levels_by_type_code();
+$severityHistory = fetch_report_severity_history($reportId);
+$routeLogs = fetch_assignment_route_logs($assignmentId = 0);
 
 try {
     $reportStmt = Database::connection()->prepare(
@@ -60,6 +62,10 @@ try {
 if (!$report) {
     flash_set('error', 'ไม่พบข้อมูลรายงาน');
     redirect('/admin/reports.php');
+}
+
+if ($assignments !== []) {
+    $routeLogs = fetch_assignment_route_logs((int) $assignments[0]['id']);
 }
 
 $severityByType = [];
@@ -162,6 +168,29 @@ require __DIR__ . '/../partials/layout_top.php';
                         </div>
                     </form>
                 </div>
+
+                <div class="rounded-2xl border border-slate-200 p-6">
+                    <h2 class="text-lg font-semibold text-slate-900">ประวัติการเปลี่ยนระดับความรุนแรง</h2>
+                    <div class="mt-4 space-y-3">
+                        <?php if ($severityHistory === []): ?>
+                            <div class="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-500">ยังไม่มีประวัติการเปลี่ยนระดับความรุนแรง</div>
+                        <?php else: ?>
+                            <?php foreach ($severityHistory as $history): ?>
+                                <div class="rounded-xl bg-slate-50 p-4">
+                                    <div class="font-semibold text-slate-900">
+                                        <?= e((string) ($history['old_level_code'] ?: '-')) ?> -> <?= e((string) ($history['new_level_code'] ?: '-')) ?>
+                                    </div>
+                                    <div class="mt-1 text-sm text-slate-600">
+                                        โดย <?= e((string) ($history['full_name'] ?: $history['changed_role_code'])) ?> เมื่อ <?= e((string) $history['changed_at']) ?>
+                                    </div>
+                                    <div class="mt-2 text-sm leading-7 text-slate-700">
+                                        เหตุผล: <?= e((string) ($history['change_reason'] ?: '-')) ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
 
             <div class="space-y-6">
@@ -219,6 +248,28 @@ require __DIR__ . '/../partials/layout_top.php';
                                     <div class="mt-2 text-xs text-slate-500">
                                         ส่งต่อเมื่อ <?= e((string) $assignment['assigned_at']) ?>
                                     </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 p-6">
+                    <h2 class="text-lg font-semibold text-slate-900">เส้นทางการส่งต่อ</h2>
+                    <div class="mt-4 space-y-3">
+                        <?php if ($routeLogs === []): ?>
+                            <div class="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-500">ยังไม่มี route log สำหรับ assignment ล่าสุด</div>
+                        <?php else: ?>
+                            <?php foreach ($routeLogs as $route): ?>
+                                <div class="rounded-xl bg-slate-50 p-4">
+                                    <div class="font-semibold text-slate-900"><?= e((string) $route['route_action']) ?></div>
+                                    <div class="mt-1 text-sm text-slate-600">
+                                        จาก <?= e((string) ($route['from_user_name'] ?: '-')) ?>
+                                        ถึง <?= e((string) ($route['to_user_name'] ?: ($route['team_code'] ?: '-'))) ?>
+                                        เมื่อ <?= e((string) $route['created_at']) ?>
+                                    </div>
+                                    <div class="mt-2 text-sm leading-7 text-slate-700">เหตุผล: <?= e((string) ($route['route_reason'] ?: '-')) ?></div>
+                                    <div class="mt-1 text-xs text-slate-500"><?= e((string) ($route['route_note'] ?: '')) ?></div>
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
