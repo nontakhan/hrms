@@ -46,6 +46,11 @@ if ($decisionType === 'forward_to_department_head' && $headUserId <= 0) {
     redirect('/team/report_detail.php?assignment_id=' . $assignmentId);
 }
 
+if (mb_strlen($decisionReason) > 1000 || mb_strlen($problemAnalysis) > 3000 || mb_strlen($correctiveAction) > 3000 || mb_strlen($preventiveAction) > 3000) {
+    flash_set('error', 'ข้อมูลที่กรอกยาวเกินกำหนด');
+    redirect('/team/report_detail.php?assignment_id=' . $assignmentId);
+}
+
 try {
     $pdo = Database::connection();
 
@@ -68,6 +73,46 @@ try {
     if (!$assignment) {
         flash_set('error', 'ไม่พบ assignment ที่คุณรับผิดชอบ');
         redirect('/team/reports.php');
+    }
+
+    if (!in_array((string) $assignment['assignment_status'], ['sent_to_team', 'returned_to_team'], true)) {
+        flash_set('error', 'assignment นี้ไม่ได้อยู่ในสถานะที่ทีมนำแก้ไขได้');
+        redirect('/team/report_detail.php?assignment_id=' . $assignmentId);
+    }
+
+    if ($selectedCategoryId > 0) {
+        $categoryStmt = $pdo->prepare(
+            'SELECT id
+             FROM risk_categories
+             WHERE id = :id AND team_id = :team_id AND is_active = 1
+             LIMIT 1'
+        );
+        $categoryStmt->execute([
+            'id' => $selectedCategoryId,
+            'team_id' => $teamId,
+        ]);
+        if (!(int) $categoryStmt->fetchColumn()) {
+            flash_set('error', 'ไม่พบประเภทความเสี่ยงของทีมนำที่เลือก');
+            redirect('/team/report_detail.php?assignment_id=' . $assignmentId);
+        }
+    }
+
+    $severityStmt = $pdo->prepare(
+        'SELECT sl.id
+         FROM severity_levels sl
+         INNER JOIN incident_reports ir ON ir.id = :report_id
+         INNER JOIN incident_types it ON it.id = ir.incident_type_id
+         WHERE sl.id = :severity_id
+           AND sl.incident_type_id = it.id
+         LIMIT 1'
+    );
+    $severityStmt->execute([
+        'report_id' => $reportId,
+        'severity_id' => $currentSeverityId,
+    ]);
+    if (!(int) $severityStmt->fetchColumn()) {
+        flash_set('error', 'ระดับความรุนแรงไม่สอดคล้องกับประเภทเหตุการณ์');
+        redirect('/team/report_detail.php?assignment_id=' . $assignmentId);
     }
 
     $reviewStmt = $pdo->prepare(
@@ -252,6 +297,24 @@ try {
         'changed_by' => $userId,
         'note' => $decisionReason,
     ]);
+
+    audit_log(
+        'team_submit_review',
+        'report_assignment',
+        $assignmentId,
+        [
+            'report_id' => $reportId,
+            'team_id' => $teamId,
+            'decision_type' => $decisionType,
+            'selected_category_id' => $selectedCategoryId > 0 ? $selectedCategoryId : null,
+            'old_severity_id' => (int) $assignment['current_severity_id'],
+            'new_severity_id' => $currentSeverityId,
+            'head_user_id' => $decisionType === 'forward_to_department_head' ? $headUserId : null,
+            'decision_reason' => $decisionReason,
+        ],
+        $userId,
+        $pdo
+    );
 
     $pdo->commit();
 

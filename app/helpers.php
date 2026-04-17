@@ -302,21 +302,83 @@ function build_query_url(string $path, array $params = []): string
     return $query === '' ? base_url($path) : base_url($path) . '?' . $query;
 }
 
-function fetch_team_categories(int $teamId): array
+function fetch_team_categories(int $teamId, bool $includeInactive = false): array
 {
     try {
-        $stmt = Database::connection()->prepare(
-            'SELECT id, parent_id, category_name, category_code
-             FROM risk_categories
-             WHERE team_id = :team_id AND is_active = 1
-             ORDER BY sort_order ASC, category_name ASC'
-        );
+        $sql = 'SELECT id, team_id, parent_id, category_name, category_code, sort_order, is_active
+                FROM risk_categories
+                WHERE team_id = :team_id';
+
+        if (!$includeInactive) {
+            $sql .= ' AND is_active = 1';
+        }
+
+        $sql .= ' ORDER BY sort_order ASC, category_name ASC';
+
+        $stmt = Database::connection()->prepare($sql);
         $stmt->execute(['team_id' => $teamId]);
 
         return $stmt->fetchAll();
     } catch (Throwable) {
         return [];
     }
+}
+
+function flatten_category_tree(array $categories, ?int $teamId = null, int $excludeId = 0): array
+{
+    $items = [];
+
+    foreach ($categories as $category) {
+        if ($teamId !== null && (int) ($category['team_id'] ?? 0) !== $teamId) {
+            continue;
+        }
+
+        if ($excludeId > 0 && (int) ($category['id'] ?? 0) === $excludeId) {
+            continue;
+        }
+
+        $items[] = $category;
+    }
+
+    usort(
+        $items,
+        static function (array $left, array $right): int {
+            $sortComparison = ((int) ($left['sort_order'] ?? 0)) <=> ((int) ($right['sort_order'] ?? 0));
+            if ($sortComparison !== 0) {
+                return $sortComparison;
+            }
+
+            return strcmp((string) ($left['category_name'] ?? ''), (string) ($right['category_name'] ?? ''));
+        }
+    );
+
+    $childrenByParent = [];
+    foreach ($items as $item) {
+        $parentKey = (int) ($item['parent_id'] ?? 0);
+        $childrenByParent[$parentKey][] = $item;
+    }
+
+    $flattened = [];
+    $walk = static function (int $parentId, int $depth) use (&$walk, &$flattened, $childrenByParent): void {
+        foreach ($childrenByParent[$parentId] ?? [] as $child) {
+            $child['depth'] = $depth;
+            $flattened[] = $child;
+            $walk((int) $child['id'], $depth + 1);
+        }
+    };
+
+    $walk(0, 0);
+
+    return $flattened;
+}
+
+function category_option_label(array $category): string
+{
+    $prefix = str_repeat('— ', (int) ($category['depth'] ?? 0));
+    $code = trim((string) ($category['category_code'] ?? ''));
+    $name = trim((string) ($category['category_name'] ?? ''));
+
+    return trim($prefix . ($code !== '' ? $code . ' - ' : '') . $name);
 }
 
 function fetch_department_heads(): array
@@ -391,4 +453,72 @@ function fetch_assignment_route_logs(int $assignmentId): array
     } catch (Throwable) {
         return [];
     }
+}
+
+function client_ip_address(): ?string
+{
+    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+
+    if (!is_string($ip) || trim($ip) === '') {
+        return null;
+    }
+
+    return mb_substr(trim($ip), 0, 45);
+}
+
+function client_user_agent(): ?string
+{
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+    if (!is_string($userAgent) || trim($userAgent) === '') {
+        return null;
+    }
+
+    return mb_substr(trim($userAgent), 0, 500);
+}
+
+function audit_log(
+    string $action,
+    string $entityType,
+    string|int $entityId,
+    ?array $detail = null,
+    ?int $userId = null,
+    ?PDO $pdo = null
+): void {
+    try {
+        $connection = $pdo ?? Database::connection();
+        $actorId = $userId;
+
+        if ($actorId === null) {
+            $user = Auth::user();
+            $actorId = isset($user['id']) ? (int) $user['id'] : null;
+        }
+
+        $stmt = $connection->prepare(
+            'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, detail_json, ip_address, user_agent)
+             VALUES (:user_id, :action, :entity_type, :entity_id, :detail_json, :ip_address, :user_agent)'
+        );
+        $stmt->execute([
+            'user_id' => $actorId,
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => (string) $entityId,
+            'detail_json' => $detail !== null ? json_encode($detail, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+            'ip_address' => client_ip_address(),
+            'user_agent' => client_user_agent(),
+        ]);
+    } catch (Throwable) {
+        // Ignore audit failures to avoid blocking the main workflow.
+    }
+}
+
+function report_status_label(string $status): string
+{
+    return match ($status) {
+        'pending' => 'รอรับเรื่อง',
+        'admin_review' => 'Admin กำลังพิจารณา',
+        'in_progress' => 'กำลังดำเนินการ',
+        'completed' => 'เสร็จสิ้น',
+        default => $status,
+    };
 }

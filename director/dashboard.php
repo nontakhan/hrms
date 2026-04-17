@@ -17,6 +17,30 @@ $exportUrl = build_query_url('actions/director_export_reports.php', [
     'date_from' => $range['date_from'],
     'date_to' => $range['date_to'],
 ]);
+$allReportsUrl = build_query_url('admin/reports.php', [
+    'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
+    'date_from' => $range['date_from'],
+    'date_to' => $range['date_to'],
+]);
+$pendingUrl = build_query_url('admin/reports.php', [
+    'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
+    'status' => 'pending',
+    'date_from' => $range['date_from'],
+    'date_to' => $range['date_to'],
+]);
+$inProgressUrl = build_query_url('admin/reports.php', [
+    'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
+    'status' => 'in_progress',
+    'date_from' => $range['date_from'],
+    'date_to' => $range['date_to'],
+]);
+$completedUrl = build_query_url('admin/reports.php', [
+    'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
+    'status' => 'completed',
+    'date_from' => $range['date_from'],
+    'date_to' => $range['date_to'],
+]);
+
 $stats = [
     'total_reports' => 0,
     'pending' => 0,
@@ -79,7 +103,7 @@ try {
     $teamSummary = $teamStmt->fetchAll();
 
     $recentStmt = $pdo->prepare(
-        "SELECT ir.report_no, ir.incident_title, ir.status, ir.reported_at, d.department_name
+        "SELECT ir.id, ir.report_no, ir.incident_title, ir.status, ir.reported_at, d.department_name
          FROM incident_reports ir
          INNER JOIN departments d ON d.id = ir.incident_department_id
          " . $whereSql . "
@@ -89,7 +113,7 @@ try {
     $recentStmt->execute($params);
     $recentReports = $recentStmt->fetchAll();
 } catch (Throwable) {
-    // keep dashboard open even if db setup is incomplete
+    // keep dashboard available even if database is incomplete
 }
 
 $severityLabels = array_map(static fn(array $row): string => (string) $row['level_code'], $severitySummary);
@@ -105,7 +129,7 @@ require __DIR__ . '/../partials/layout_top.php';
             <div>
                 <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Director Overview</div>
                 <h1 class="text-3xl font-bold text-slate-900">Dashboard ผู้อำนวยการ</h1>
-                <p class="mt-2 text-slate-600">ภาพรวมความเสี่ยงขององค์กรสำหรับติดตามสถานะ แนวโน้มสำคัญ และกรองตามปีงบประมาณหรือช่วงวันที่ได้</p>
+                <p class="mt-2 text-slate-600">ดูภาพรวมความเสี่ยงขององค์กร พร้อม drill-down ไปยังรายการรายงานที่เกี่ยวข้องได้ทันที</p>
             </div>
             <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
                 กลับ Dashboard
@@ -113,22 +137,26 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
 
         <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl bg-slate-50 p-5">
+            <a href="<?= e($allReportsUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
                 <div class="text-sm text-slate-500">รายงานทั้งหมด</div>
                 <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['total_reports']) ?></div>
-            </div>
-            <div class="rounded-2xl bg-slate-50 p-5">
+                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
+            </a>
+            <a href="<?= e($pendingUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
                 <div class="text-sm text-slate-500">รอรับเรื่อง</div>
                 <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['pending']) ?></div>
-            </div>
-            <div class="rounded-2xl bg-slate-50 p-5">
+                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
+            </a>
+            <a href="<?= e($inProgressUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
                 <div class="text-sm text-slate-500">กำลังดำเนินการ</div>
                 <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['in_progress']) ?></div>
-            </div>
-            <div class="rounded-2xl bg-slate-50 p-5">
+                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
+            </a>
+            <a href="<?= e($completedUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
                 <div class="text-sm text-slate-500">เสร็จสิ้น</div>
                 <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['completed']) ?></div>
-            </div>
+                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
+            </a>
         </div>
 
         <form method="get" class="mt-8 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-3">
@@ -170,7 +198,10 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
 
         <div class="mt-8 rounded-2xl border border-slate-200 p-6">
-            <h2 class="text-lg font-semibold text-slate-900">รายงานล่าสุด</h2>
+            <div class="flex items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold text-slate-900">รายงานล่าสุด</h2>
+                <a href="<?= e($allReportsUrl) ?>" class="text-sm font-medium text-brand-700 hover:underline">ดูทั้งหมด</a>
+            </div>
             <div class="mt-4 overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
@@ -185,10 +216,14 @@ require __DIR__ . '/../partials/layout_top.php';
                     <tbody>
                         <?php foreach ($recentReports as $report): ?>
                             <tr class="border-b border-slate-100">
-                                <td class="px-3 py-3"><?= e((string) ($report['report_no'] ?: '-')) ?></td>
+                                <td class="px-3 py-3">
+                                    <a href="<?= e(base_url('admin/report_detail.php?id=' . $report['id'])) ?>" class="font-medium text-brand-700 hover:underline">
+                                        <?= e((string) ($report['report_no'] ?: '-')) ?>
+                                    </a>
+                                </td>
                                 <td class="px-3 py-3"><?= e((string) $report['incident_title']) ?></td>
                                 <td class="px-3 py-3"><?= e((string) $report['department_name']) ?></td>
-                                <td class="px-3 py-3"><?= e((string) $report['status']) ?></td>
+                                <td class="px-3 py-3"><?= e(report_status_label((string) $report['status'])) ?></td>
                                 <td class="px-3 py-3"><?= e((string) $report['reported_at']) ?></td>
                             </tr>
                         <?php endforeach; ?>
@@ -213,10 +248,7 @@ require __DIR__ . '/../partials/layout_top.php';
                     backgroundColor: '#1d7f5f'
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
@@ -231,10 +263,7 @@ require __DIR__ . '/../partials/layout_top.php';
                     backgroundColor: ['#1d7f5f', '#f4b942', '#0f172a', '#38bdf8', '#ef4444', '#8b5cf6']
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
     }
 </script>

@@ -20,6 +20,11 @@ if ($reportId <= 0 || $teamId <= 0 || $sentReason === '') {
     redirect('/admin/report_detail.php?id=' . $reportId);
 }
 
+if (mb_strlen($sentReason) > 1000) {
+    flash_set('error', 'เหตุผลการส่งต่อยาวเกินกำหนด');
+    redirect('/admin/report_detail.php?id=' . $reportId);
+}
+
 try {
     $pdo = Database::connection();
     $user = Auth::user();
@@ -32,6 +37,11 @@ try {
     if (!$report) {
         flash_set('error', 'ไม่พบรายงานที่ต้องการส่งต่อ');
         redirect('/admin/reports.php');
+    }
+
+    if ((string) $report['status'] === 'completed') {
+        flash_set('error', 'ไม่สามารถส่งต่อรายงานที่ปิดงานแล้วได้');
+        redirect('/admin/report_detail.php?id=' . $reportId);
     }
 
     $teamStmt = $pdo->prepare('SELECT id, team_code FROM teams WHERE id = :id AND is_active = 1 LIMIT 1');
@@ -149,7 +159,7 @@ try {
         'route_note' => 'Admin assigned report to team',
     ]);
 
-    $newStatus = in_array((string) $report['status'], ['pending', 'admin_review', 'completed'], true) ? 'in_progress' : $report['status'];
+    $newStatus = in_array((string) $report['status'], ['pending', 'admin_review'], true) ? 'in_progress' : (string) $report['status'];
 
     $updateReportStmt = $pdo->prepare(
         'UPDATE incident_reports
@@ -172,6 +182,25 @@ try {
         'changed_by' => $userId,
         'note' => 'Assigned to team ' . $team['team_code'],
     ]);
+
+    audit_log(
+        'admin_assign_report',
+        'report_assignment',
+        $assignmentId,
+        [
+            'report_id' => $reportId,
+            'team_id' => $teamId,
+            'team_code' => (string) $team['team_code'],
+            'assignment_no' => $assignmentNo,
+            'fiscal_year_id' => (int) $fiscalYear['id'],
+            'running_no' => $nextNumber,
+            'sent_reason' => $sentReason,
+            'old_status' => (string) $report['status'],
+            'new_status' => $newStatus,
+        ],
+        $userId,
+        $pdo
+    );
 
     $pdo->commit();
 

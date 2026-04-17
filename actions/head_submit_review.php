@@ -25,6 +25,11 @@ if ($assignmentId <= 0 || $reportId <= 0 || $userId <= 0 || $reviewAction === ''
     redirect('/head/report_detail.php?assignment_id=' . $assignmentId);
 }
 
+if (mb_strlen($reviewAction) > 3000 || mb_strlen($reviewNote) > 3000) {
+    flash_set('error', 'ข้อมูลที่กรอกยาวเกินกำหนด');
+    redirect('/head/report_detail.php?assignment_id=' . $assignmentId);
+}
+
 try {
     $pdo = Database::connection();
 
@@ -46,6 +51,11 @@ try {
     if (!$assignment) {
         flash_set('error', 'ไม่พบงานที่คุณรับผิดชอบ');
         redirect('/head/reports.php');
+    }
+
+    if ((string) $assignment['assignment_status'] !== 'sent_to_department_head') {
+        flash_set('error', 'assignment นี้ไม่ได้อยู่ในสถานะที่หัวหน้ากลุ่มงานสามารถดำเนินการได้');
+        redirect('/head/report_detail.php?assignment_id=' . $assignmentId);
     }
 
     $reviewStmt = $pdo->prepare(
@@ -72,7 +82,7 @@ try {
              WHERE id = :id'
         );
         $saveReviewStmt->execute([
-            'department_id' => $departmentId > 0 ? $departmentId : 1,
+            'department_id' => $departmentId > 0 ? $departmentId : null,
             'review_action' => $reviewAction,
             'review_note' => $reviewNote !== '' ? $reviewNote : null,
             'reviewed_by' => $userId,
@@ -89,7 +99,7 @@ try {
         $saveReviewStmt->execute([
             'report_id' => $reportId,
             'assignment_id' => $assignmentId,
-            'department_id' => $departmentId > 0 ? $departmentId : 1,
+            'department_id' => $departmentId > 0 ? $departmentId : null,
             'review_action' => $reviewAction,
             'review_note' => $reviewNote !== '' ? $reviewNote : null,
             'reviewed_by' => $userId,
@@ -136,6 +146,21 @@ try {
         'changed_by' => $userId,
         'note' => 'Department head returned to team',
     ]);
+
+    audit_log(
+        'department_head_submit_review',
+        'report_assignment',
+        $assignmentId,
+        [
+            'report_id' => $reportId,
+            'department_id' => $departmentId > 0 ? $departmentId : null,
+            'review_action' => $reviewAction,
+            'has_review_note' => $reviewNote !== '',
+            'next_assignment_status' => 'returned_to_team',
+        ],
+        $userId,
+        $pdo
+    );
 
     $pdo->commit();
 

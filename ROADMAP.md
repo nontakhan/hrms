@@ -41,6 +41,13 @@
 - เพิ่มเมนูนำทางส่วนบนแบบแยกตาม role และเพิ่ม validation ฟอร์มรายงาน/ไฟล์แนบเบื้องต้น
 - เพิ่มตัวกรองปีงบประมาณและช่วงวันที่ใน dashboard ของ ผอ. และหน้ารายการรายงานของ admin
 - เพิ่มปุ่ม export CSV ตามตัวกรองในหน้ารายการรายงานของ admin และ dashboard ของ ผอ.
+- เพิ่มการแก้ไข category ของทีมนำ พร้อมกำหนด parent-child และลำดับการแสดงผลได้จากหน้าเดียว
+- เพิ่มการเปิด/ปิดใช้งาน category ฝั่งทีมนำ และแสดง parent name ชัดขึ้นในหน้ารายการของ admin
+- เพิ่ม search/filter ในหน้า master data สำหรับทีมนำ หน่วยงาน และ category
+- เพิ่ม drill-down จาก dashboard ผอ. ไปหน้ารายการรายงาน และลิงก์เข้า report detail จากตารางล่าสุด
+- เพิ่มคลิกที่กราฟบน dashboard ผอ. เพื่อเปิดรายการที่กรองตามระดับความรุนแรงและทีมนำ
+- เพิ่ม hardening ฝั่ง action สำหรับตรวจสถานะ assignment/report และ validate ข้อมูลก่อนบันทึก
+- เพิ่ม audit log สำหรับ action สำคัญของ admin, ทีมนำ, และหัวหน้ากลุ่มงาน/หัวหน้างาน
 
 ## In Progress
 
@@ -54,6 +61,12 @@
 - เตรียมขยาย hardening ของฟอร์มรายงานให้ครอบคลุม mime type และข้อความช่วยผู้ใช้มากขึ้น
 - เตรียมต่อยอด dashboard ให้มี drill-down และ export ตามตัวกรอง
 - เตรียมต่อยอด export ให้รองรับสรุปเชิงวิเคราะห์และรายงานแยกตามทีม/สถานะ
+- เตรียมต่อยอดการปิดใช้งาน category และการจัดการ tree ขนาดใหญ่ให้คล่องขึ้น
+- เตรียมต่อยอดการค้นหา/กรอง category tree จำนวนมากให้ใช้งานง่ายขึ้น
+- เตรียมต่อยอด master data ให้รองรับ pagination หรือ DataTables เมื่อข้อมูลมีจำนวนมากขึ้น
+- เตรียมต่อยอด chart/dashboard ให้คลิกกราฟแล้วเปิดรายการที่กรองไว้ได้
+- เตรียมต่อยอด admin report queue ให้รองรับ drill-down เชิงลึกและตัวกรองเพิ่มขึ้น
+- เตรียมต่อยอด audit log ให้ครอบคลุม master data, ผู้ใช้ระบบ, และการตั้งค่าหลังบ้าน
 
 ## Next
 
@@ -66,6 +79,13 @@
 - เพิ่ม validation เชิงลึกและข้อความแนะนำหน้าฟอร์มให้ผู้ใช้กรอกข้อมูลได้ถูกต้องขึ้น
 - เพิ่ม filter และ export รายงานภาพรวมสำหรับผู้บริหารและ admin
 - เพิ่มการจัดลำดับ category และปรับ parent-child UI ให้ใช้งานง่ายขึ้น
+- เพิ่มการปิดใช้งาน category ฝั่งทีมนำ และปรับหน้ารายการ master data ให้แสดง parent name ชัดขึ้น
+- เพิ่มการค้นหาและ filter ใน master data สำหรับข้อมูลจำนวนมาก
+- ปรับ dashboard/timeline ให้ drill-down ต่อจากข้อมูลสรุปได้
+- เพิ่มลิงก์ข้ามไปยัง section สำคัญในหน้า detail เช่น severity history และ route log
+- เพิ่ม filter เชิงลึกใน admin report queue เพื่อรองรับ drill-down จาก dashboard ได้ครบ
+- เพิ่ม hardening เชิงสิทธิ์และ validation เพิ่มเติมใน action ฝั่งหลังบ้าน
+- เพิ่ม audit log ในจุดแก้ไข master data, ผู้ใช้, และ system settings
 
 ## Pending Milestones
 

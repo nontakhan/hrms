@@ -15,6 +15,7 @@ $teamId = (int) ($_POST['team_id'] ?? 0);
 $parentId = (int) ($_POST['parent_id'] ?? 0);
 $categoryCode = trim((string) ($_POST['category_code'] ?? ''));
 $categoryName = trim((string) ($_POST['category_name'] ?? ''));
+$sortOrderInput = (int) ($_POST['sort_order'] ?? 0);
 $userId = (int) (Auth::user()['id'] ?? 0);
 
 if ($teamId <= 0 || $categoryName === '') {
@@ -56,13 +57,16 @@ try {
         $resolvedParentId = $parentId;
     }
 
-    $sortStmt = $pdo->prepare(
-        'SELECT COALESCE(MAX(sort_order), 0) + 1
-         FROM risk_categories
-         WHERE team_id = :team_id'
-    );
-    $sortStmt->execute(['team_id' => $teamId]);
-    $sortOrder = (int) $sortStmt->fetchColumn();
+    $sortOrder = $sortOrderInput > 0 ? $sortOrderInput : 0;
+    if ($sortOrder <= 0) {
+        $sortStmt = $pdo->prepare(
+            'SELECT COALESCE(MAX(sort_order), 0) + 1
+             FROM risk_categories
+             WHERE team_id = :team_id'
+        );
+        $sortStmt->execute(['team_id' => $teamId]);
+        $sortOrder = (int) $sortStmt->fetchColumn();
+    }
 
     $insertStmt = $pdo->prepare(
         'INSERT INTO risk_categories (

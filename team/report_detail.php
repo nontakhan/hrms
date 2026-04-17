@@ -100,7 +100,7 @@ require __DIR__ . '/../partials/layout_top.php';
 
         <div class="mt-8 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
             <div class="space-y-6">
-                <div class="rounded-2xl border border-slate-200 p-6">
+                <div id="severity-history" class="rounded-2xl border border-slate-200 p-6">
                     <h2 class="text-lg font-semibold text-slate-900">ข้อมูลเหตุการณ์</h2>
                     <div class="mt-4 grid gap-4 md:grid-cols-2">
                         <div class="rounded-xl bg-slate-50 p-4">
@@ -137,7 +137,7 @@ require __DIR__ . '/../partials/layout_top.php';
                     </div>
                 </div>
 
-                <div class="rounded-2xl border border-slate-200 p-6">
+                <div id="route-log" class="rounded-2xl border border-slate-200 p-6">
                     <h2 class="text-lg font-semibold text-slate-900">ประวัติระดับความรุนแรง</h2>
                     <div class="mt-4 space-y-3">
                         <?php if ($severityHistory === []): ?>

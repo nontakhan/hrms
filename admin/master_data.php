@@ -17,6 +17,11 @@ $editId = isset($_GET['edit_id']) ? (int) $_GET['edit_id'] : 0;
 $editingTeam = null;
 $editingDepartment = null;
 $editingCategory = null;
+$editingCategoryOptions = [];
+$categoryTree = [];
+$teamSearch = trim((string) ($_GET['team_q'] ?? ''));
+$departmentSearch = trim((string) ($_GET['department_q'] ?? ''));
+$categorySearch = trim((string) ($_GET['category_q'] ?? ''));
 
 try {
     $teams = Database::connection()->query(
@@ -32,10 +37,10 @@ try {
     )->fetchAll();
 
     $allTeamCategories = Database::connection()->query(
-        'SELECT rc.id, rc.team_id, rc.parent_id, rc.category_name, rc.category_code, rc.is_active, t.team_code, t.team_name
+        'SELECT rc.id, rc.team_id, rc.parent_id, rc.category_name, rc.category_code, rc.sort_order, rc.is_active, t.team_code, t.team_name
          FROM risk_categories rc
          INNER JOIN teams t ON t.id = rc.team_id
-         ORDER BY t.team_code ASC, rc.category_name ASC'
+         ORDER BY t.team_code ASC, rc.sort_order ASC, rc.category_name ASC'
     )->fetchAll();
 
     if ($editType === 'team' && $editId > 0) {
@@ -62,19 +67,65 @@ try {
 
     if ($editType === 'category' && $editId > 0) {
         $stmt = Database::connection()->prepare(
-            'SELECT id, team_id, parent_id, category_name, category_code, is_active
+            'SELECT id, team_id, parent_id, category_name, category_code, sort_order, is_active
              FROM risk_categories
              WHERE id = :id
              LIMIT 1'
         );
         $stmt->execute(['id' => $editId]);
         $editingCategory = $stmt->fetch() ?: null;
+        if ($editingCategory) {
+            $editingCategoryOptions = flatten_category_tree(
+                $allTeamCategories,
+                (int) $editingCategory['team_id'],
+                (int) $editingCategory['id']
+            );
+        }
     }
+
+    $categoryTree = flatten_category_tree($allTeamCategories);
 } catch (Throwable) {
     $teams = [];
     $departments = [];
     $allTeamCategories = [];
+    $categoryTree = [];
 }
+
+$filteredTeams = array_values(array_filter(
+    $teams,
+    static function (array $team) use ($teamSearch): bool {
+        if ($teamSearch === '') {
+            return true;
+        }
+
+        $haystack = mb_strtolower(trim((string) (($team['team_code'] ?? '') . ' ' . ($team['team_name'] ?? '') . ' ' . ($team['description'] ?? ''))));
+        return str_contains($haystack, mb_strtolower($teamSearch));
+    }
+));
+
+$filteredDepartments = array_values(array_filter(
+    $departments,
+    static function (array $department) use ($departmentSearch): bool {
+        if ($departmentSearch === '') {
+            return true;
+        }
+
+        $haystack = mb_strtolower(trim((string) (($department['department_code'] ?? '') . ' ' . ($department['department_name'] ?? '') . ' ' . ($department['department_type'] ?? ''))));
+        return str_contains($haystack, mb_strtolower($departmentSearch));
+    }
+));
+
+$filteredCategoryTree = array_values(array_filter(
+    $categoryTree,
+    static function (array $category) use ($categorySearch): bool {
+        if ($categorySearch === '') {
+            return true;
+        }
+
+        $haystack = mb_strtolower(trim((string) (($category['team_code'] ?? '') . ' ' . ($category['category_code'] ?? '') . ' ' . ($category['category_name'] ?? ''))));
+        return str_contains($haystack, mb_strtolower($categorySearch));
+    }
+));
 
 require __DIR__ . '/../partials/layout_top.php';
 ?>
@@ -192,10 +243,10 @@ require __DIR__ . '/../partials/layout_top.php';
                         <label class="mb-2 block text-sm font-medium text-slate-700">Parent Category</label>
                         <select name="parent_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
                             <option value="">ไม่มี (ระดับบนสุด)</option>
-                            <?php foreach ($allTeamCategories as $category): ?>
-                                <?php if ($editingCategory && (int) $editingCategory['id'] === (int) $category['id']) { continue; } ?>
+                            <?php $parentOptions = $editingCategory ? $editingCategoryOptions : flatten_category_tree($allTeamCategories); ?>
+                            <?php foreach ($parentOptions as $category): ?>
                                 <option value="<?= e((string) $category['id']) ?>" <?= (int) ($editingCategory['parent_id'] ?? 0) === (int) $category['id'] ? 'selected' : '' ?>>
-                                    <?= e((string) $category['team_code']) ?> - <?= e((string) $category['category_name']) ?>
+                                    <?= e((string) $category['team_code']) ?> - <?= e(category_option_label($category)) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -207,6 +258,10 @@ require __DIR__ . '/../partials/layout_top.php';
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">ชื่อประเภท</label>
                         <input name="category_name" type="text" value="<?= e((string) ($editingCategory['category_name'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-700">ลำดับการแสดงผล</label>
+                        <input name="sort_order" type="number" min="1" value="<?= e((string) ($editingCategory['sort_order'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
                     </div>
                     <div class="flex flex-wrap gap-3">
                         <button type="submit" class="flex-1 rounded-xl bg-amber-500 px-4 py-3 font-semibold text-slate-900 transition hover:bg-amber-400">
@@ -224,9 +279,18 @@ require __DIR__ . '/../partials/layout_top.php';
 
         <div class="mt-8 grid gap-6 xl:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">ทีมนำในระบบ</h2>
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold text-slate-900">ทีมนำในระบบ</h2>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"><?= e((string) count($filteredTeams)) ?> รายการ</span>
+                </div>
+                <form method="get" class="mt-4 flex gap-3">
+                    <input type="text" name="team_q" value="<?= e($teamSearch) ?>" placeholder="ค้นหาทีมนำ" class="flex-1 rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                    <input type="hidden" name="department_q" value="<?= e($departmentSearch) ?>">
+                    <input type="hidden" name="category_q" value="<?= e($categorySearch) ?>">
+                    <button type="submit" class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white">ค้นหา</button>
+                </form>
                 <div class="mt-4 space-y-3">
-                    <?php foreach ($teams as $team): ?>
+                    <?php foreach ($filteredTeams as $team): ?>
                         <div class="rounded-xl bg-slate-50 p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
@@ -250,13 +314,25 @@ require __DIR__ . '/../partials/layout_top.php';
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    <?php if ($filteredTeams === []): ?>
+                        <div class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">ไม่พบข้อมูลทีมนำตามคำค้น</div>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">หน่วยงานในระบบ</h2>
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold text-slate-900">หน่วยงานในระบบ</h2>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"><?= e((string) count($filteredDepartments)) ?> รายการ</span>
+                </div>
+                <form method="get" class="mt-4 flex gap-3">
+                    <input type="hidden" name="team_q" value="<?= e($teamSearch) ?>">
+                    <input type="text" name="department_q" value="<?= e($departmentSearch) ?>" placeholder="ค้นหาหน่วยงาน" class="flex-1 rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                    <input type="hidden" name="category_q" value="<?= e($categorySearch) ?>">
+                    <button type="submit" class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white">ค้นหา</button>
+                </form>
                 <div class="mt-4 space-y-3">
-                    <?php foreach ($departments as $department): ?>
+                    <?php foreach ($filteredDepartments as $department): ?>
                         <div class="rounded-xl bg-slate-50 p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
@@ -284,20 +360,42 @@ require __DIR__ . '/../partials/layout_top.php';
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    <?php if ($filteredDepartments === []): ?>
+                        <div class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">ไม่พบข้อมูลหน่วยงานตามคำค้น</div>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">ประเภทความเสี่ยงของทีมนำ</h2>
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold text-slate-900">ประเภทความเสี่ยงของทีมนำ</h2>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"><?= e((string) count($filteredCategoryTree)) ?> รายการ</span>
+                </div>
+                <form method="get" class="mt-4 flex gap-3">
+                    <input type="hidden" name="team_q" value="<?= e($teamSearch) ?>">
+                    <input type="hidden" name="department_q" value="<?= e($departmentSearch) ?>">
+                    <input type="text" name="category_q" value="<?= e($categorySearch) ?>" placeholder="ค้นหา category" class="flex-1 rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                    <button type="submit" class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white">ค้นหา</button>
+                </form>
                 <div class="mt-4 space-y-3">
-                    <?php foreach ($allTeamCategories as $category): ?>
+                    <?php foreach ($filteredCategoryTree as $category): ?>
+                        <?php
+                        $parentLabel = '-';
+                        foreach ($allTeamCategories as $parentCategory) {
+                            if ((int) $parentCategory['id'] === (int) ($category['parent_id'] ?? 0)) {
+                                $parentLabel = (string) $parentCategory['team_code'] . ' - ' . trim((string) (($parentCategory['category_code'] ? $parentCategory['category_code'] . ' - ' : '') . $parentCategory['category_name']));
+                                break;
+                            }
+                        }
+                        ?>
                         <div class="rounded-xl bg-slate-50 p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <div class="font-semibold text-slate-900"><?= e((string) $category['team_code']) ?> - <?= e((string) $category['category_name']) ?></div>
+                                    <div class="font-semibold text-slate-900"><?= e((string) $category['team_code']) ?> - <?= e(category_option_label($category)) ?></div>
                                     <div class="mt-1 text-xs text-slate-500">
                                         <?= e((string) ($category['category_code'] ?: '-')) ?>
-                                        | parent <?= e((string) ($category['parent_id'] ?: '-')) ?>
+                                        | ลำดับ <?= e((string) ($category['sort_order'] ?: '-')) ?>
+                                        | parent <?= e($parentLabel) ?>
                                         | <?= (int) $category['is_active'] === 1 ? 'ใช้งาน' : 'ปิดใช้งาน' ?>
                                     </div>
                                 </div>
@@ -315,6 +413,9 @@ require __DIR__ . '/../partials/layout_top.php';
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    <?php if ($filteredCategoryTree === []): ?>
+                        <div class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">ไม่พบข้อมูล category ตามคำค้น</div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

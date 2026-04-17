@@ -22,6 +22,11 @@ if ($reportId <= 0 || $incidentTypeId <= 0 || $incidentDepartmentId <= 0 || $cur
     redirect('/admin/report_detail.php?id=' . $reportId);
 }
 
+if (mb_strlen($changeReason) > 1000) {
+    flash_set('error', 'เหตุผลการแก้ไขยาวเกินกำหนด');
+    redirect('/admin/report_detail.php?id=' . $reportId);
+}
+
 try {
     $pdo = Database::connection();
 
@@ -37,6 +42,35 @@ try {
     if (!$report) {
         flash_set('error', 'ไม่พบรายงานที่ต้องการแก้ไข');
         redirect('/admin/reports.php');
+    }
+
+    if ((string) $report['status'] === 'completed') {
+        flash_set('error', 'ไม่สามารถแก้ไขรายงานที่ปิดงานแล้วได้');
+        redirect('/admin/report_detail.php?id=' . $reportId);
+    }
+
+    $incidentTypeStmt = $pdo->prepare(
+        'SELECT id
+         FROM incident_types
+         WHERE id = :id AND is_active = 1
+         LIMIT 1'
+    );
+    $incidentTypeStmt->execute(['id' => $incidentTypeId]);
+    if (!(int) $incidentTypeStmt->fetchColumn()) {
+        flash_set('error', 'ไม่พบประเภทเหตุการณ์ที่เลือก');
+        redirect('/admin/report_detail.php?id=' . $reportId);
+    }
+
+    $departmentStmt = $pdo->prepare(
+        'SELECT id
+         FROM departments
+         WHERE id = :id AND is_active = 1
+         LIMIT 1'
+    );
+    $departmentStmt->execute(['id' => $incidentDepartmentId]);
+    if (!(int) $departmentStmt->fetchColumn()) {
+        flash_set('error', 'ไม่พบหน่วยงานที่เลือก');
+        redirect('/admin/report_detail.php?id=' . $reportId);
     }
 
     $severityCheckStmt = $pdo->prepare(
@@ -61,7 +95,7 @@ try {
 
     $pdo->beginTransaction();
 
-    $newStatus = $report['status'] === 'pending' ? 'admin_review' : $report['status'];
+    $newStatus = (string) $report['status'] === 'pending' ? 'admin_review' : (string) $report['status'];
 
     $updateStmt = $pdo->prepare(
         'UPDATE incident_reports
@@ -84,9 +118,9 @@ try {
         $historyStmt = $pdo->prepare(
             'INSERT INTO report_severity_histories (
                 report_id, old_severity_id, new_severity_id, changed_by_user_id, changed_role_code, change_reason
-            ) VALUES (
+             ) VALUES (
                 :report_id, :old_severity_id, :new_severity_id, :changed_by_user_id, :changed_role_code, :change_reason
-            )'
+             )'
         );
         $historyStmt->execute([
             'report_id' => $reportId,
@@ -110,9 +144,26 @@ try {
         'note' => $changeReason,
     ]);
 
+    audit_log(
+        'admin_update_report',
+        'incident_report',
+        $reportId,
+        [
+            'incident_type_id' => $incidentTypeId,
+            'incident_department_id' => $incidentDepartmentId,
+            'old_severity_id' => (int) $report['current_severity_id'],
+            'new_severity_id' => $currentSeverityId,
+            'old_status' => (string) $report['status'],
+            'new_status' => $newStatus,
+            'change_reason' => $changeReason,
+        ],
+        $userId,
+        $pdo
+    );
+
     $pdo->commit();
 
-    flash_set('success', 'อัปเดตข้อมูลรายงานเรียบร้อย');
+    flash_set('success', 'อัปเดตรายงานเรียบร้อย');
 } catch (Throwable) {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
