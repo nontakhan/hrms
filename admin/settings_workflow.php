@@ -15,12 +15,22 @@ $departments = fetch_all_departments();
 $headUsers = fetch_department_head_users();
 $visibilityEntries = fetch_team_department_visibility_entries();
 $activeFiscalYear = active_fiscal_year();
+$runningSummary = fetch_team_running_number_summary(isset($activeFiscalYear['id']) ? (int) $activeFiscalYear['id'] : null);
 $editFiscalYearId = isset($_GET['edit_fiscal_year']) ? (int) $_GET['edit_fiscal_year'] : 0;
 $editingFiscalYear = null;
+$editVisibilityId = isset($_GET['edit_visibility']) ? (int) $_GET['edit_visibility'] : 0;
+$editingVisibility = null;
 
 foreach ($fiscalYears as $year) {
     if ((int) $year['id'] === $editFiscalYearId) {
         $editingFiscalYear = $year;
+        break;
+    }
+}
+
+foreach ($visibilityEntries as $entry) {
+    if ((int) $entry['id'] === $editVisibilityId) {
+        $editingVisibility = $entry;
         break;
     }
 }
@@ -36,9 +46,14 @@ require __DIR__ . '/../partials/layout_top.php';
                     <h1 class="text-3xl font-bold text-slate-900">ตั้งค่าปีงบประมาณและการมองเห็นเคส</h1>
                     <p class="mt-2 text-slate-600">ใช้กำหนดปีงบที่ใช้รันเลขเอกสาร และสิทธิ์มองเห็นเคสข้ามหัวหน้าสำหรับโครงสร้างงานที่ซับซ้อน เช่น กลุ่มการพยาบาล</p>
                 </div>
-                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
-                    กลับ Dashboard
-                </a>
+                <div class="flex flex-wrap gap-3">
+                    <a href="<?= e(base_url('admin/workflow_history.php')) ?>" class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 font-medium text-brand-700 transition hover:bg-brand-100">
+                        ดูประวัติการตั้งค่า
+                    </a>
+                    <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
+                        กลับ Dashboard
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -137,6 +152,58 @@ require __DIR__ . '/../partials/layout_top.php';
                         </tbody>
                     </table>
                 </div>
+
+                <div class="mt-6 rounded-2xl border border-slate-200 p-6">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-900">เลขรันล่าสุดรายทีมนำ</h3>
+                            <p class="mt-1 text-sm text-slate-600">แสดงตัวเลขล่าสุดของปีงบที่ active เพื่อช่วยตรวจสอบความต่อเนื่องของเลข assignment</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">ทีมนำ</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">ปีงบ</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">เลขล่าสุด</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">ตัวอย่างเลขถัดไป</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                <?php foreach ($runningSummary as $row): ?>
+                                    <?php $nextNumber = (int) $row['last_number'] + 1; ?>
+                                    <tr>
+                                        <td class="px-4 py-3 font-medium text-slate-900"><?= e((string) $row['team_code']) ?> - <?= e((string) $row['team_name']) ?></td>
+                                        <td class="px-4 py-3 text-slate-600"><?= e((string) $row['year_label']) ?></td>
+                                        <td class="px-4 py-3 text-slate-600"><?= e((string) $row['last_number']) ?></td>
+                                        <td class="px-4 py-3 text-slate-600"><?= e((string) $row['team_code']) ?> <?= e((string) $nextNumber) ?>/<?= e((string) $row['year_short']) ?></td>
+                                        <td class="px-4 py-3">
+                                            <?php if ((int) $row['last_number'] > 0): ?>
+                                                <form action="<?= e(base_url('actions/admin_reset_team_running_number.php')) ?>" method="post" onsubmit="return confirm('ยืนยันการรีเซ็ตเลขรันของทีมนำนี้เป็น 0? ใช้ได้เฉพาะกรณีที่ยังไม่มี assignment ในปีงบนี้เท่านั้น');">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="team_id" value="<?= e((string) $row['team_id']) ?>">
+                                                    <input type="hidden" name="fiscal_year_id" value="<?= e((string) ($activeFiscalYear['id'] ?? 0)) ?>">
+                                                    <button type="submit" class="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white">
+                                                        รีเซ็ตเลขรัน
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="text-xs text-slate-500">ยังไม่ต้องรีเซ็ต</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php if ($runningSummary === []): ?>
+                                    <tr>
+                                        <td colspan="5" class="px-4 py-4 text-center text-slate-500">ยังไม่มีข้อมูลเลขรันสำหรับปีงบที่กำหนด</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <section class="rounded-[2rem] bg-white p-8 shadow-soft">
@@ -145,15 +212,20 @@ require __DIR__ . '/../partials/layout_top.php';
                     <p class="mt-1 text-sm text-slate-600">ใช้กำหนดว่าใครสามารถมองเห็นเคสของทีมนำและหน่วยงานใดเพิ่มเติมได้ แม้ assignment จะส่งไปยังหัวหน้าคนอื่น</p>
                 </div>
 
-                <form action="<?= e(base_url('actions/admin_save_team_visibility.php')) ?>" method="post" class="mt-6 grid gap-4 rounded-2xl border border-slate-200 p-6">
+                <form action="<?= e(base_url($editingVisibility ? 'actions/admin_update_team_visibility.php' : 'actions/admin_save_team_visibility.php')) ?>" method="post" class="mt-6 grid gap-4 rounded-2xl border border-slate-200 p-6">
                     <?= csrf_field() ?>
+                    <?php if ($editingVisibility): ?>
+                        <input type="hidden" name="visibility_id" value="<?= e((string) $editingVisibility['id']) ?>">
+                    <?php endif; ?>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label class="mb-2 block text-sm font-medium text-slate-700">ทีมนำ</label>
                             <select name="team_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                                 <option value="">เลือกทีมนำ</option>
                                 <?php foreach ($teams as $team): ?>
-                                    <option value="<?= e((string) $team['id']) ?>"><?= e((string) $team['team_code']) ?> - <?= e((string) $team['team_name']) ?></option>
+                                    <option value="<?= e((string) $team['id']) ?>" <?= (int) ($editingVisibility['team_id'] ?? 0) === (int) $team['id'] ? 'selected' : '' ?>>
+                                        <?= e((string) $team['team_code']) ?> - <?= e((string) $team['team_name']) ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -162,7 +234,9 @@ require __DIR__ . '/../partials/layout_top.php';
                             <select name="department_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                                 <option value="">เลือกหน่วยงาน</option>
                                 <?php foreach ($departments as $department): ?>
-                                    <option value="<?= e((string) $department['id']) ?>"><?= e((string) $department['department_name']) ?></option>
+                                    <option value="<?= e((string) $department['id']) ?>" <?= (int) ($editingVisibility['department_id'] ?? 0) === (int) $department['id'] ? 'selected' : '' ?>>
+                                        <?= e((string) $department['department_name']) ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -173,7 +247,7 @@ require __DIR__ . '/../partials/layout_top.php';
                             <select name="viewer_user_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
                                 <option value="">เลือกหัวหน้าที่จะเห็นเคส</option>
                                 <?php foreach ($headUsers as $headUser): ?>
-                                    <option value="<?= e((string) $headUser['id']) ?>">
+                                    <option value="<?= e((string) $headUser['id']) ?>" <?= (int) ($editingVisibility['viewer_user_id'] ?? 0) === (int) $headUser['id'] ? 'selected' : '' ?>>
                                         <?= e((string) $headUser['full_name']) ?> (<?= e((string) ($headUser['department_name'] ?? '-')) ?>)
                                     </option>
                                 <?php endforeach; ?>
@@ -182,15 +256,20 @@ require __DIR__ . '/../partials/layout_top.php';
                         <div>
                             <label class="mb-2 block text-sm font-medium text-slate-700">รูปแบบการมองเห็น</label>
                             <select name="visibility_type" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" required>
-                                <option value="supervisor">หัวหน้ากลุ่ม/ผู้กำกับดูแล</option>
-                                <option value="direct">เห็นโดยตรง</option>
+                                <option value="supervisor" <?= (($editingVisibility['visibility_type'] ?? '') === 'supervisor') ? 'selected' : '' ?>>หัวหน้ากลุ่ม/ผู้กำกับดูแล</option>
+                                <option value="direct" <?= (($editingVisibility['visibility_type'] ?? '') === 'direct') ? 'selected' : '' ?>>เห็นโดยตรง</option>
                             </select>
                         </div>
                     </div>
-                    <div>
+                    <div class="flex flex-wrap gap-3">
                         <button type="submit" class="rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white transition hover:bg-brand-700">
-                            บันทึกสิทธิ์มองเห็น
+                            <?= $editingVisibility ? 'บันทึกการแก้ไขสิทธิ์มองเห็น' : 'บันทึกสิทธิ์มองเห็น' ?>
                         </button>
+                        <?php if ($editingVisibility): ?>
+                            <a href="<?= e(base_url('admin/settings_workflow.php')) ?>" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
+                                ยกเลิกการแก้ไข
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </form>
 
@@ -219,17 +298,27 @@ require __DIR__ . '/../partials/layout_top.php';
                                         </span>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <form action="<?= e(base_url('actions/admin_toggle_team_visibility_status.php')) ?>" method="post">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="visibility_id" value="<?= e((string) $entry['id']) ?>">
-                                            <input type="hidden" name="current_status" value="<?= e((string) $entry['is_active']) ?>">
-                                            <button type="submit" class="rounded-lg <?= (int) $entry['is_active'] === 1 ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white' ?> px-3 py-2 text-xs font-semibold">
-                                                <?= (int) $entry['is_active'] === 1 ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>
-                                            </button>
-                                        </form>
+                                        <div class="flex flex-wrap gap-2">
+                                            <a href="<?= e(base_url('admin/settings_workflow.php?edit_visibility=' . $entry['id'])) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">
+                                                แก้ไข
+                                            </a>
+                                            <form action="<?= e(base_url('actions/admin_toggle_team_visibility_status.php')) ?>" method="post">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="visibility_id" value="<?= e((string) $entry['id']) ?>">
+                                                <input type="hidden" name="current_status" value="<?= e((string) $entry['is_active']) ?>">
+                                                <button type="submit" class="rounded-lg <?= (int) $entry['is_active'] === 1 ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white' ?> px-3 py-2 text-xs font-semibold">
+                                                    <?= (int) $entry['is_active'] === 1 ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
+                            <?php if ($visibilityEntries === []): ?>
+                                <tr>
+                                    <td colspan="6" class="px-4 py-4 text-center text-slate-500">ยังไม่มีการตั้งค่าสิทธิ์มองเห็นเคส</td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

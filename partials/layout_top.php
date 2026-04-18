@@ -15,6 +15,7 @@ if ($roleCode === 'ADMIN') {
         ['label' => 'ผู้ใช้', 'href' => base_url('admin/users.php')],
         ['label' => 'Master Data', 'href' => base_url('admin/master_data.php')],
         ['label' => 'Workflow Settings', 'href' => base_url('admin/settings_workflow.php')],
+        ['label' => 'Workflow History', 'href' => base_url('admin/workflow_history.php')],
         ['label' => 'Password กลาง', 'href' => base_url('admin/settings_public_access.php')],
     ];
 } elseif ($roleCode === 'TEAM_LEAD') {

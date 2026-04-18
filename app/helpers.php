@@ -457,6 +457,149 @@ function fetch_team_department_visibility_entries(): array
     }
 }
 
+function fetch_team_running_number_summary(?int $fiscalYearId = null): array
+{
+    try {
+        $resolvedFiscalYearId = $fiscalYearId;
+
+        if ($resolvedFiscalYearId === null || $resolvedFiscalYearId <= 0) {
+            $activeYear = active_fiscal_year();
+            $resolvedFiscalYearId = isset($activeYear['id']) ? (int) $activeYear['id'] : 0;
+        }
+
+        if ($resolvedFiscalYearId <= 0) {
+            return [];
+        }
+
+        $stmt = Database::connection()->prepare(
+            "SELECT
+                t.id AS team_id,
+                t.team_code,
+                t.team_name,
+                COALESCE(trn.last_number, 0) AS last_number,
+                fy.year_label,
+                fy.year_short
+             FROM teams t
+             CROSS JOIN fiscal_years fy
+             LEFT JOIN team_running_numbers trn
+                ON trn.team_id = t.id
+               AND trn.fiscal_year_id = fy.id
+             WHERE fy.id = :fiscal_year_id
+               AND t.is_active = 1
+             ORDER BY t.team_code ASC, t.team_name ASC"
+        );
+        $stmt->execute(['fiscal_year_id' => $resolvedFiscalYearId]);
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function workflow_audit_actions(): array
+{
+    return [
+        'admin_save_fiscal_year' => 'เพิ่มปีงบประมาณ',
+        'admin_update_fiscal_year' => 'แก้ไขปีงบประมาณ',
+        'admin_activate_fiscal_year' => 'เปลี่ยนปีงบที่ใช้งาน',
+        'admin_save_team_visibility' => 'เพิ่มสิทธิ์มองเห็นเคส',
+        'admin_update_team_visibility' => 'แก้ไขสิทธิ์มองเห็นเคส',
+        'admin_toggle_team_visibility_status' => 'เปิด/ปิดสิทธิ์มองเห็นเคส',
+        'admin_reset_team_running_number' => 'รีเซ็ตเลขรันทีมนำ',
+    ];
+}
+
+function workflow_audit_action_label(string $action): string
+{
+    $actions = workflow_audit_actions();
+
+    return $actions[$action] ?? $action;
+}
+
+function workflow_entity_label(string $entityType): string
+{
+    return match ($entityType) {
+        'fiscal_year' => 'ปีงบประมาณ',
+        'team_department_visibility' => 'สิทธิ์มองเห็นเคส',
+        'team_running_number' => 'เลขรันทีมนำ',
+        default => $entityType,
+    };
+}
+
+function fetch_workflow_audit_logs(array $filters = []): array
+{
+    try {
+        $actions = array_keys(workflow_audit_actions());
+        $placeholders = [];
+        $params = [];
+
+        foreach ($actions as $index => $action) {
+            $key = 'action_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $action;
+        }
+
+        $sql = "SELECT
+                    al.id,
+                    al.action,
+                    al.entity_type,
+                    al.entity_id,
+                    al.detail_json,
+                    al.created_at,
+                    u.full_name,
+                    u.username
+                FROM audit_logs al
+                LEFT JOIN users u ON u.id = al.user_id
+                WHERE al.action IN (" . implode(', ', $placeholders) . ")";
+
+        $selectedAction = trim((string) ($filters['action'] ?? ''));
+        if ($selectedAction !== '' && in_array($selectedAction, $actions, true)) {
+            $sql .= ' AND al.action = :selected_action';
+            $params['selected_action'] = $selectedAction;
+        }
+
+        $dateFrom = trim((string) ($filters['date_from'] ?? ''));
+        if ($dateFrom !== '') {
+            $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateFrom);
+            if ($candidate !== false) {
+                $sql .= ' AND DATE(al.created_at) >= :date_from';
+                $params['date_from'] = $candidate->format('Y-m-d');
+            }
+        }
+
+        $dateTo = trim((string) ($filters['date_to'] ?? ''));
+        if ($dateTo !== '') {
+            $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateTo);
+            if ($candidate !== false) {
+                $sql .= ' AND DATE(al.created_at) <= :date_to';
+                $params['date_to'] = $candidate->format('Y-m-d');
+            }
+        }
+
+        $sql .= ' ORDER BY al.id DESC LIMIT 300';
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['detail_array'] = [];
+
+            if (!empty($row['detail_json'])) {
+                $decoded = json_decode((string) $row['detail_json'], true);
+                if (is_array($decoded)) {
+                    $row['detail_array'] = $decoded;
+                }
+            }
+        }
+        unset($row);
+
+        return $rows;
+    } catch (Throwable) {
+        return [];
+    }
+}
+
 function fetch_report_severity_history(int $reportId): array
 {
     try {
