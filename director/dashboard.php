@@ -17,24 +17,24 @@ $exportUrl = build_query_url('actions/director_export_reports.php', [
     'date_from' => $range['date_from'],
     'date_to' => $range['date_to'],
 ]);
-$allReportsUrl = build_query_url('admin/reports.php', [
+$allReportsUrl = build_query_url('director/reports.php', [
     'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
     'date_from' => $range['date_from'],
     'date_to' => $range['date_to'],
 ]);
-$pendingUrl = build_query_url('admin/reports.php', [
+$pendingUrl = build_query_url('director/reports.php', [
     'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
     'status' => 'pending',
     'date_from' => $range['date_from'],
     'date_to' => $range['date_to'],
 ]);
-$inProgressUrl = build_query_url('admin/reports.php', [
+$inProgressUrl = build_query_url('director/reports.php', [
     'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
     'status' => 'in_progress',
     'date_from' => $range['date_from'],
     'date_to' => $range['date_to'],
 ]);
-$completedUrl = build_query_url('admin/reports.php', [
+$completedUrl = build_query_url('director/reports.php', [
     'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
     'status' => 'completed',
     'date_from' => $range['date_from'],
@@ -217,7 +217,7 @@ require __DIR__ . '/../partials/layout_top.php';
                         <?php foreach ($recentReports as $report): ?>
                             <tr class="border-b border-slate-100">
                                 <td class="px-3 py-3">
-                                    <a href="<?= e(base_url('admin/report_detail.php?id=' . $report['id'])) ?>" class="font-medium text-brand-700 hover:underline">
+                                    <a href="<?= e(base_url('director/report_detail.php?id=' . $report['id'])) ?>" class="font-medium text-brand-700 hover:underline">
                                         <?= e((string) ($report['report_no'] ?: '-')) ?>
                                     </a>
                                 </td>

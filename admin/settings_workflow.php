@@ -58,7 +58,7 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
 
         <div class="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <section class="rounded-[2rem] bg-white p-8 shadow-soft">
+            <section id="fiscal-years" class="rounded-[2rem] bg-white p-8 shadow-soft">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-xl font-semibold text-slate-900">ปีงบประมาณ</h2>
@@ -153,7 +153,7 @@ require __DIR__ . '/../partials/layout_top.php';
                     </table>
                 </div>
 
-                <div class="mt-6 rounded-2xl border border-slate-200 p-6">
+                <div id="running-numbers" class="mt-6 rounded-2xl border border-slate-200 p-6">
                     <div class="flex items-center justify-between gap-4">
                         <div>
                             <h3 class="text-lg font-semibold text-slate-900">เลขรันล่าสุดรายทีมนำ</h3>
@@ -206,7 +206,7 @@ require __DIR__ . '/../partials/layout_top.php';
                 </div>
             </section>
 
-            <section class="rounded-[2rem] bg-white p-8 shadow-soft">
+            <section id="visibility" class="rounded-[2rem] bg-white p-8 shadow-soft">
                 <div>
                     <h2 class="text-xl font-semibold text-slate-900">สิทธิ์มองเห็นเคสข้ามหัวหน้า</h2>
                     <p class="mt-1 text-sm text-slate-600">ใช้กำหนดว่าใครสามารถมองเห็นเคสของทีมนำและหน่วยงานใดเพิ่มเติมได้ แม้ assignment จะส่งไปยังหัวหน้าคนอื่น</p>

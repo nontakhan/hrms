@@ -499,6 +499,7 @@ function fetch_team_running_number_summary(?int $fiscalYearId = null): array
 function workflow_audit_actions(): array
 {
     return [
+        'admin_create_fiscal_year' => 'เพิ่มปีงบประมาณ',
         'admin_save_fiscal_year' => 'เพิ่มปีงบประมาณ',
         'admin_update_fiscal_year' => 'แก้ไขปีงบประมาณ',
         'admin_activate_fiscal_year' => 'เปลี่ยนปีงบที่ใช้งาน',
@@ -524,6 +525,29 @@ function workflow_entity_label(string $entityType): string
         'team_running_number' => 'เลขรันทีมนำ',
         default => $entityType,
     };
+}
+
+function workflow_entity_url(array $log): ?string
+{
+    $entityType = (string) ($log['entity_type'] ?? '');
+    $entityId = (string) ($log['entity_id'] ?? '');
+    $detail = $log['detail_array'] ?? [];
+
+    return match ($entityType) {
+        'fiscal_year' => ctype_digit($entityId)
+            ? build_query_url('admin/settings_workflow.php', ['edit_fiscal_year' => $entityId]) . '#fiscal-years'
+            : base_url('admin/settings_workflow.php#fiscal-years'),
+        'team_department_visibility' => ctype_digit($entityId)
+            ? build_query_url('admin/settings_workflow.php', ['edit_visibility' => $entityId]) . '#visibility'
+            : base_url('admin/settings_workflow.php#visibility'),
+        'team_running_number' => base_url('admin/settings_workflow.php#running-numbers'),
+        default => null,
+    };
+}
+
+function workflow_audit_detail_url(int $auditId): string
+{
+    return build_query_url('admin/workflow_history_detail.php', ['id' => $auditId]);
 }
 
 function fetch_workflow_audit_logs(array $filters = []): array
@@ -558,6 +582,12 @@ function fetch_workflow_audit_logs(array $filters = []): array
             $params['selected_action'] = $selectedAction;
         }
 
+        $actorId = (int) ($filters['user_id'] ?? 0);
+        if ($actorId > 0) {
+            $sql .= ' AND al.user_id = :user_id';
+            $params['user_id'] = $actorId;
+        }
+
         $dateFrom = trim((string) ($filters['date_from'] ?? ''));
         if ($dateFrom !== '') {
             $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateFrom);
@@ -574,6 +604,18 @@ function fetch_workflow_audit_logs(array $filters = []): array
                 $sql .= ' AND DATE(al.created_at) <= :date_to';
                 $params['date_to'] = $candidate->format('Y-m-d');
             }
+        }
+
+        $keyword = trim((string) ($filters['keyword'] ?? ''));
+        if ($keyword !== '') {
+            $sql .= ' AND (
+                al.entity_id LIKE :keyword
+                OR al.detail_json LIKE :keyword
+                OR al.action LIKE :keyword
+                OR u.full_name LIKE :keyword
+                OR u.username LIKE :keyword
+            )';
+            $params['keyword'] = '%' . $keyword . '%';
         }
 
         $sql .= ' ORDER BY al.id DESC LIMIT 300';
@@ -597,6 +639,180 @@ function fetch_workflow_audit_logs(array $filters = []): array
         return $rows;
     } catch (Throwable) {
         return [];
+    }
+}
+
+function fetch_workflow_audit_log_detail(int $auditId): ?array
+{
+    if ($auditId <= 0) {
+        return null;
+    }
+
+    try {
+        $stmt = Database::connection()->prepare(
+            "SELECT
+                al.id,
+                al.action,
+                al.entity_type,
+                al.entity_id,
+                al.detail_json,
+                al.ip_address,
+                al.user_agent,
+                al.created_at,
+                u.full_name,
+                u.username
+             FROM audit_logs al
+             LEFT JOIN users u ON u.id = al.user_id
+             WHERE al.id = :id
+             LIMIT 1"
+        );
+        $stmt->execute(['id' => $auditId]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            return null;
+        }
+
+        $row['detail_array'] = [];
+        if (!empty($row['detail_json'])) {
+            $decoded = json_decode((string) $row['detail_json'], true);
+            if (is_array($decoded)) {
+                $row['detail_array'] = $decoded;
+            }
+        }
+
+        return $row;
+    } catch (Throwable) {
+        return null;
+    }
+}
+
+function pretty_json(mixed $value): string
+{
+    $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+
+    return is_string($json) ? $json : '';
+}
+
+function fetch_workflow_audit_actors(): array
+{
+    try {
+        $actions = array_keys(workflow_audit_actions());
+        $placeholders = [];
+        $params = [];
+
+        foreach ($actions as $index => $action) {
+            $key = 'action_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $action;
+        }
+
+        $stmt = Database::connection()->prepare(
+            "SELECT DISTINCT
+                u.id,
+                u.full_name,
+                u.username
+             FROM audit_logs al
+             INNER JOIN users u ON u.id = al.user_id
+             WHERE al.action IN (" . implode(', ', $placeholders) . ")
+             ORDER BY u.full_name ASC, u.username ASC"
+        );
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function fetch_workflow_audit_summary(array $filters = []): array
+{
+    $summary = [
+        'total' => 0,
+        'by_action' => [],
+    ];
+
+    try {
+        $actions = workflow_audit_actions();
+        $params = [];
+        $placeholders = [];
+
+        foreach (array_keys($actions) as $index => $action) {
+            $key = 'action_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $action;
+        }
+
+        $sql = "SELECT al.action, COUNT(*) AS total
+                FROM audit_logs al
+                WHERE al.action IN (" . implode(', ', $placeholders) . ")";
+
+        $selectedAction = trim((string) ($filters['action'] ?? ''));
+        if ($selectedAction !== '' && isset($actions[$selectedAction])) {
+            $sql .= ' AND al.action = :selected_action';
+            $params['selected_action'] = $selectedAction;
+        }
+
+        $actorId = (int) ($filters['user_id'] ?? 0);
+        if ($actorId > 0) {
+            $sql .= ' AND al.user_id = :user_id';
+            $params['user_id'] = $actorId;
+        }
+
+        $dateFrom = trim((string) ($filters['date_from'] ?? ''));
+        if ($dateFrom !== '') {
+            $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateFrom);
+            if ($candidate !== false) {
+                $sql .= ' AND DATE(al.created_at) >= :date_from';
+                $params['date_from'] = $candidate->format('Y-m-d');
+            }
+        }
+
+        $dateTo = trim((string) ($filters['date_to'] ?? ''));
+        if ($dateTo !== '') {
+            $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateTo);
+            if ($candidate !== false) {
+                $sql .= ' AND DATE(al.created_at) <= :date_to';
+                $params['date_to'] = $candidate->format('Y-m-d');
+            }
+        }
+
+        $keyword = trim((string) ($filters['keyword'] ?? ''));
+        if ($keyword !== '') {
+            $sql .= ' AND (
+                al.entity_id LIKE :keyword
+                OR al.detail_json LIKE :keyword
+                OR al.action LIKE :keyword
+            )';
+            $params['keyword'] = '%' . $keyword . '%';
+        }
+
+        $sql .= ' GROUP BY al.action';
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($actions as $action => $label) {
+            $summary['by_action'][$action] = [
+                'label' => $label,
+                'total' => 0,
+            ];
+        }
+
+        foreach ($rows as $row) {
+            $action = (string) ($row['action'] ?? '');
+            $total = (int) ($row['total'] ?? 0);
+
+            if (isset($summary['by_action'][$action])) {
+                $summary['by_action'][$action]['total'] = $total;
+                $summary['total'] += $total;
+            }
+        }
+
+        return $summary;
+    } catch (Throwable) {
+        return $summary;
     }
 }
 

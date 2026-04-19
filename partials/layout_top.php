@@ -16,6 +16,7 @@ if ($roleCode === 'ADMIN') {
         ['label' => 'Master Data', 'href' => base_url('admin/master_data.php')],
         ['label' => 'Workflow Settings', 'href' => base_url('admin/settings_workflow.php')],
         ['label' => 'Workflow History', 'href' => base_url('admin/workflow_history.php')],
+        ['label' => 'System Check', 'href' => base_url('admin/system_check.php')],
         ['label' => 'Password กลาง', 'href' => base_url('admin/settings_public_access.php')],
     ];
 } elseif ($roleCode === 'TEAM_LEAD') {
@@ -27,12 +28,13 @@ if ($roleCode === 'ADMIN') {
 } elseif ($roleCode === 'DEPARTMENT_HEAD') {
     $navItems = [
         ['label' => 'Dashboard', 'href' => base_url('dashboard.php')],
-        ['label' => 'คิวงานหัวหน้า', 'href' => base_url('head/reports.php')],
+        ['label' => 'คิวหัวหน้า', 'href' => base_url('head/reports.php')],
     ];
 } elseif ($roleCode === 'DIRECTOR') {
     $navItems = [
         ['label' => 'Dashboard', 'href' => base_url('dashboard.php')],
         ['label' => 'ภาพรวม ผอ.', 'href' => base_url('director/dashboard.php')],
+        ['label' => 'Reports', 'href' => base_url('director/reports.php')],
     ];
 } elseif ($authUser) {
     $navItems = [
