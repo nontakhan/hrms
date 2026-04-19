@@ -48,12 +48,30 @@ if ($roleCode === 'ADMIN') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($pageTitle) ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html,
+        body,
+        button,
+        input,
+        select,
+        textarea,
+        table,
+        .dataTables_wrapper {
+            font-family: 'Sarabun', sans-serif;
+        }
+    </style>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                    },
                     colors: {
                         brand: {
                             50: '#f3faf7',

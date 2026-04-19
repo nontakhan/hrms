@@ -175,7 +175,21 @@ function badge_label(string $status): string
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Install | Tepha Risk Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html,
+        body,
+        button,
+        input,
+        select,
+        textarea,
+        table {
+            font-family: 'Sarabun', sans-serif;
+        }
+    </style>
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-800">
 <div class="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(29,127,95,0.16),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#eef6f3_100%)]">
