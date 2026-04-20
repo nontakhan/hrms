@@ -83,11 +83,13 @@ require __DIR__ . '/../partials/layout_top.php';
 ?>
 <main class="mx-auto max-w-7xl px-6 py-8 lg:py-12">
     <section class="rounded-[2rem] bg-white p-8 shadow-soft">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">System Check</div>
-                <h1 class="text-3xl font-bold text-slate-900">ตรวจความพร้อมก่อนใช้งานจริง</h1>
-                <p class="mt-2 text-slate-600">ใช้เช็กค่าพื้นฐานของระบบก่อนเปิดใช้งาน เช่น ฐานข้อมูล ปีงบ รหัสผ่านกลาง โฟลเดอร์ และข้อมูลตั้งต้นสำคัญ</p>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="max-w-3xl">
+                <div class="mb-3 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">System Check</div>
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">ตรวจความพร้อมก่อนใช้งานจริง</h1>
+                <p class="mt-3 text-sm leading-7 text-slate-600">
+                    ใช้ตรวจค่าพื้นฐานของระบบก่อนเปิดใช้งาน เช่น ฐานข้อมูล ปีงบ รหัสผ่านกลาง โฟลเดอร์จัดเก็บไฟล์ และข้อมูลตั้งต้นที่จำเป็นต่อการทำงานของระบบ
+                </p>
             </div>
             <div class="flex flex-wrap gap-3">
                 <a href="<?= e(base_url('DEPLOYMENT_CHECKLIST.md')) ?>" class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 font-medium text-brand-700 transition hover:bg-brand-100">Deployment Checklist</a>
@@ -96,9 +98,18 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
 
         <div class="mt-8 grid gap-4 md:grid-cols-3">
-            <div class="rounded-2xl bg-emerald-50 p-5"><div class="text-sm font-medium text-emerald-700">พร้อม</div><div class="mt-2 text-3xl font-bold text-emerald-900"><?= e((string) $summary['pass']) ?></div></div>
-            <div class="rounded-2xl bg-amber-50 p-5"><div class="text-sm font-medium text-amber-700">ควรตรวจเพิ่ม</div><div class="mt-2 text-3xl font-bold text-amber-900"><?= e((string) $summary['warn']) ?></div></div>
-            <div class="rounded-2xl bg-rose-50 p-5"><div class="text-sm font-medium text-rose-700">ต้องแก้ก่อนใช้งาน</div><div class="mt-2 text-3xl font-bold text-rose-900"><?= e((string) $summary['fail']) ?></div></div>
+            <article class="rounded-2xl bg-emerald-50 p-5">
+                <div class="text-sm font-medium text-emerald-700">พร้อม</div>
+                <div class="mt-2 text-3xl font-bold text-emerald-900"><?= e((string) $summary['pass']) ?></div>
+            </article>
+            <article class="rounded-2xl bg-amber-50 p-5">
+                <div class="text-sm font-medium text-amber-700">ควรตรวจเพิ่ม</div>
+                <div class="mt-2 text-3xl font-bold text-amber-900"><?= e((string) $summary['warn']) ?></div>
+            </article>
+            <article class="rounded-2xl bg-rose-50 p-5">
+                <div class="text-sm font-medium text-rose-700">ต้องแก้ก่อนใช้งาน</div>
+                <div class="mt-2 text-3xl font-bold text-rose-900"><?= e((string) $summary['fail']) ?></div>
+            </article>
         </div>
 
         <div class="mt-8 overflow-hidden rounded-2xl border border-slate-200">

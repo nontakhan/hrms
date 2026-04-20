@@ -12,6 +12,7 @@ $selectedFiscalYearId = isset($_GET['fiscal_year_id']) ? (int) $_GET['fiscal_yea
 $selectedDateFrom = trim((string) ($_GET['date_from'] ?? ''));
 $selectedDateTo = trim((string) ($_GET['date_to'] ?? ''));
 $range = resolve_report_filter_range($selectedDateFrom, $selectedDateTo, $selectedFiscalYearId);
+
 $exportUrl = build_query_url('actions/director_export_reports.php', [
     'fiscal_year_id' => $selectedFiscalYearId > 0 ? $selectedFiscalYearId : '',
     'date_from' => $range['date_from'],
@@ -124,42 +125,22 @@ $teamData = array_map(static fn(array $row): int => (int) $row['total'], $teamSu
 require __DIR__ . '/../partials/layout_top.php';
 ?>
 <main class="mx-auto max-w-7xl px-6 py-8 lg:py-12">
-    <section class="rounded-[2rem] bg-white p-8 shadow-soft">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Director Overview</div>
-                <h1 class="text-3xl font-bold text-slate-900">Dashboard ผู้อำนวยการ</h1>
-                <p class="mt-2 text-slate-600">ดูภาพรวมความเสี่ยงขององค์กร พร้อม drill-down ไปยังรายการรายงานที่เกี่ยวข้องได้ทันที</p>
+    <section class="rounded-[2rem] border border-white/70 bg-white/95 p-8 shadow-soft">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="max-w-3xl">
+                <div class="mb-3 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Director Overview</div>
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Dashboard ผู้อำนวยการ</h1>
+                <p class="mt-3 text-sm leading-7 text-slate-600">
+                    ดูภาพรวมความเสี่ยงขององค์กรในมุม read-only พร้อมตัวกรอง ชุดสรุปหลัก กราฟ และลิงก์ไปยังรายงานที่เกี่ยวข้องได้ทันที
+                </p>
             </div>
-            <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
-                กลับ Dashboard
-            </a>
+            <div class="flex flex-wrap gap-3">
+                <a href="<?= e($exportUrl) ?>" class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-medium text-emerald-700 transition hover:bg-emerald-100">Export CSV</a>
+                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">กลับ Dashboard</a>
+            </div>
         </div>
 
-        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <a href="<?= e($allReportsUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
-                <div class="text-sm text-slate-500">รายงานทั้งหมด</div>
-                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['total_reports']) ?></div>
-                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
-            </a>
-            <a href="<?= e($pendingUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
-                <div class="text-sm text-slate-500">รอรับเรื่อง</div>
-                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['pending']) ?></div>
-                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
-            </a>
-            <a href="<?= e($inProgressUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
-                <div class="text-sm text-slate-500">กำลังดำเนินการ</div>
-                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['in_progress']) ?></div>
-                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
-            </a>
-            <a href="<?= e($completedUrl) ?>" class="rounded-2xl bg-slate-50 p-5 transition hover:bg-slate-100">
-                <div class="text-sm text-slate-500">เสร็จสิ้น</div>
-                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['completed']) ?></div>
-                <div class="mt-2 text-xs text-slate-500">กดเพื่อดูรายการ</div>
-            </a>
-        </div>
-
-        <form method="get" class="mt-8 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-3">
+        <form method="get" class="mt-8 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 lg:grid-cols-3">
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">ปีงบประมาณ</label>
                 <select name="fiscal_year_id" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
@@ -179,27 +160,67 @@ require __DIR__ . '/../partials/layout_top.php';
                 <label class="mb-2 block text-sm font-medium text-slate-700">วันที่รายงานถึง</label>
                 <input name="date_to" type="date" value="<?= e($range['date_to'] ?? '') ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
             </div>
-            <div class="lg:col-span-3 flex flex-wrap gap-3">
+            <div class="flex flex-wrap gap-3 lg:col-span-3">
                 <button type="submit" class="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700">กรองข้อมูล</button>
                 <a href="<?= e(base_url('director/dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-100">ล้างตัวกรอง</a>
-                <a href="<?= e($exportUrl) ?>" class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-medium text-emerald-700 transition hover:bg-emerald-100">Export CSV</a>
             </div>
         </form>
 
-        <div class="mt-8 grid gap-6 xl:grid-cols-2">
-            <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">สรุประดับความรุนแรง</h2>
-                <canvas id="severityChart" class="mt-4 h-80 w-full"></canvas>
-            </div>
-            <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">สรุปจำนวนงานตามทีมนำ</h2>
-                <canvas id="teamChart" class="mt-4 h-80 w-full"></canvas>
-            </div>
+        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <a href="<?= e($allReportsUrl) ?>" class="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-brand-200 hover:bg-brand-50/50">
+                <div class="text-sm text-slate-500">รายงานทั้งหมด</div>
+                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) $stats['total_reports']) ?></div>
+                <div class="mt-2 text-xs text-slate-500">กดเพื่อเปิดรายการทั้งหมด</div>
+            </a>
+            <a href="<?= e($pendingUrl) ?>" class="rounded-2xl border border-amber-200 bg-amber-50 p-5 transition hover:bg-amber-100/70">
+                <div class="text-sm text-amber-700">รอรับเรื่อง</div>
+                <div class="mt-2 text-3xl font-bold text-amber-900"><?= e((string) $stats['pending']) ?></div>
+                <div class="mt-2 text-xs text-amber-700">กดเพื่อดูเคสคงค้าง</div>
+            </a>
+            <a href="<?= e($inProgressUrl) ?>" class="rounded-2xl border border-violet-200 bg-violet-50 p-5 transition hover:bg-violet-100/70">
+                <div class="text-sm text-violet-700">กำลังดำเนินการ</div>
+                <div class="mt-2 text-3xl font-bold text-violet-900"><?= e((string) $stats['in_progress']) ?></div>
+                <div class="mt-2 text-xs text-violet-700">กดเพื่อดูเคสระหว่างจัดการ</div>
+            </a>
+            <a href="<?= e($completedUrl) ?>" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition hover:bg-emerald-100/70">
+                <div class="text-sm text-emerald-700">เสร็จสิ้น</div>
+                <div class="mt-2 text-3xl font-bold text-emerald-900"><?= e((string) $stats['completed']) ?></div>
+                <div class="mt-2 text-xs text-emerald-700">กดเพื่อดูเคสที่ปิดแล้ว</div>
+            </a>
         </div>
 
-        <div class="mt-8 rounded-2xl border border-slate-200 p-6">
-            <div class="flex items-center justify-between gap-3">
-                <h2 class="text-lg font-semibold text-slate-900">รายงานล่าสุด</h2>
+        <div class="mt-8 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <section class="rounded-2xl border border-slate-200 p-6">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">สรุประดับความรุนแรง</h2>
+                        <p class="mt-1 text-sm text-slate-500">ดูกระจายของระดับความรุนแรงจากข้อมูลในช่วงที่กรองไว้</p>
+                    </div>
+                </div>
+                <div class="mt-4 h-80">
+                    <canvas id="severityChart" class="h-full w-full"></canvas>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-200 p-6">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">สรุปงานตามทีมนำ</h2>
+                        <p class="mt-1 text-sm text-slate-500">ดูว่ารายงานถูกส่งต่อไปยังทีมนำใดมากที่สุด</p>
+                    </div>
+                </div>
+                <div class="mt-4 h-80">
+                    <canvas id="teamChart" class="h-full w-full"></canvas>
+                </div>
+            </section>
+        </div>
+
+        <section class="mt-8 rounded-2xl border border-slate-200 p-6">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900">รายงานล่าสุด</h2>
+                    <p class="mt-1 text-sm text-slate-500">รายการล่าสุดสำหรับตรวจสอบแนวโน้มและกดเข้าอ่านรายละเอียดแบบ read-only</p>
+                </div>
                 <a href="<?= e($allReportsUrl) ?>" class="text-sm font-medium text-brand-700 hover:underline">ดูทั้งหมด</a>
             </div>
             <div class="mt-4 overflow-x-auto">
@@ -223,14 +244,16 @@ require __DIR__ . '/../partials/layout_top.php';
                                 </td>
                                 <td class="px-3 py-3"><?= e((string) $report['incident_title']) ?></td>
                                 <td class="px-3 py-3"><?= e((string) $report['department_name']) ?></td>
-                                <td class="px-3 py-3"><?= e(report_status_label((string) $report['status'])) ?></td>
+                                <td class="px-3 py-3">
+                                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"><?= e(report_status_label((string) $report['status'])) ?></span>
+                                </td>
                                 <td class="px-3 py-3"><?= e((string) $report['reported_at']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
     </section>
 </main>
 
@@ -245,10 +268,17 @@ require __DIR__ . '/../partials/layout_top.php';
                 datasets: [{
                     label: 'จำนวนรายงาน',
                     data: <?= json_encode($severityData, JSON_UNESCAPED_UNICODE) ?>,
-                    backgroundColor: '#1d7f5f'
+                    backgroundColor: '#1d7f5f',
+                    borderRadius: 10
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
         });
     }
 
@@ -263,7 +293,15 @@ require __DIR__ . '/../partials/layout_top.php';
                     backgroundColor: ['#1d7f5f', '#f4b942', '#0f172a', '#38bdf8', '#ef4444', '#8b5cf6']
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
         });
     }
 </script>

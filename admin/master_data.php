@@ -130,26 +130,38 @@ $filteredCategoryTree = array_values(array_filter(
 require __DIR__ . '/../partials/layout_top.php';
 ?>
 <main class="mx-auto max-w-7xl px-6 py-8 lg:py-12">
-    <section class="rounded-[2rem] bg-white p-8 shadow-soft">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <section class="rounded-[2rem] border border-white/70 bg-white/95 p-8 shadow-soft">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Admin Master Data</div>
                 <h1 class="text-3xl font-bold text-slate-900">จัดการข้อมูลพื้นฐาน</h1>
-                <p class="mt-2 text-slate-600">ดูแลทีมนำ หน่วยงาน และประเภทความเสี่ยง พร้อมทั้งแก้ไขและเปิด/ปิดใช้งานข้อมูลเดิมได้จากหน้าจอนี้</p>
+                <p class="mt-2 max-w-3xl text-slate-600">ดูแลทีมนำ หน่วยงาน และประเภทความเสี่ยงจากหน้าเดียว โดยแยกโซน “เพิ่มหรือแก้ไขข้อมูล” ออกจาก “รายการข้อมูลในระบบ” ให้ใช้ง่ายขึ้น</p>
             </div>
             <div class="flex flex-wrap gap-3">
-                <a href="<?= e(base_url('admin/users.php')) ?>" class="rounded-xl bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800">
-                    จัดการผู้ใช้
-                </a>
-                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
-                    กลับ Dashboard
-                </a>
+                <a href="<?= e(base_url('admin/users.php')) ?>" class="rounded-xl bg-slate-900 px-4 py-3 font-medium text-white transition hover:bg-slate-800">จัดการผู้ใช้</a>
+                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">กลับ Dashboard</a>
+            </div>
+        </div>
+
+        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div class="text-sm text-slate-500">ทีมนำในระบบ</div>
+                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) count($teams)) ?></div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div class="text-sm text-slate-500">หน่วยงานในระบบ</div>
+                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) count($departments)) ?></div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div class="text-sm text-slate-500">หมวดความเสี่ยงทั้งหมด</div>
+                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) count($allTeamCategories)) ?></div>
             </div>
         </div>
 
         <div class="mt-8 grid gap-6 xl:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 p-6">
                 <h2 class="text-lg font-semibold text-slate-900"><?= $editingTeam ? 'แก้ไขทีมนำ' : 'เพิ่มทีมนำ' ?></h2>
+                <p class="mt-1 text-sm text-slate-500">ใช้ส่วนนี้สำหรับดูแลรหัสและชื่อทีมนำที่ใช้ใน workflow ส่งต่อเคส</p>
                 <form action="<?= e(base_url($editingTeam ? 'actions/admin_update_team.php' : 'actions/admin_save_team.php')) ?>" method="post" class="mt-4 space-y-4">
                     <?= csrf_field() ?>
                     <?php if ($editingTeam): ?>
@@ -168,13 +180,9 @@ require __DIR__ . '/../partials/layout_top.php';
                         <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"><?= e((string) ($editingTeam['description'] ?? '')) ?></textarea>
                     </div>
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" class="flex-1 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700">
-                            <?= $editingTeam ? 'บันทึกการแก้ไข' : 'บันทึกทีมนำ' ?>
-                        </button>
+                        <button type="submit" class="flex-1 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700"><?= $editingTeam ? 'บันทึกการแก้ไข' : 'บันทึกทีมนำ' ?></button>
                         <?php if ($editingTeam): ?>
-                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
-                                ยกเลิก
-                            </a>
+                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">ยกเลิก</a>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -182,6 +190,7 @@ require __DIR__ . '/../partials/layout_top.php';
 
             <div class="rounded-2xl border border-slate-200 p-6">
                 <h2 class="text-lg font-semibold text-slate-900"><?= $editingDepartment ? 'แก้ไขหน่วยงาน' : 'เพิ่มหน่วยงาน' ?></h2>
+                <p class="mt-1 text-sm text-slate-500">ดูแลหน่วยงานที่อ้างอิงในการรายงาน การส่งต่อ และสิทธิ์มองเห็นในระบบ</p>
                 <form action="<?= e(base_url($editingDepartment ? 'actions/admin_update_department.php' : 'actions/admin_save_department.php')) ?>" method="post" class="mt-4 space-y-4">
                     <?= csrf_field() ?>
                     <?php if ($editingDepartment): ?>
@@ -209,13 +218,9 @@ require __DIR__ . '/../partials/layout_top.php';
                         เป็นกลุ่มงานการพยาบาล
                     </label>
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" class="flex-1 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800">
-                            <?= $editingDepartment ? 'บันทึกการแก้ไข' : 'บันทึกหน่วยงาน' ?>
-                        </button>
+                        <button type="submit" class="flex-1 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800"><?= $editingDepartment ? 'บันทึกการแก้ไข' : 'บันทึกหน่วยงาน' ?></button>
                         <?php if ($editingDepartment): ?>
-                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
-                                ยกเลิก
-                            </a>
+                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">ยกเลิก</a>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -223,6 +228,7 @@ require __DIR__ . '/../partials/layout_top.php';
 
             <div class="rounded-2xl border border-slate-200 p-6">
                 <h2 class="text-lg font-semibold text-slate-900"><?= $editingCategory ? 'แก้ไขประเภทความเสี่ยง' : 'เพิ่มประเภทความเสี่ยงของทีมนำ' ?></h2>
+                <p class="mt-1 text-sm text-slate-500">จัดหมวดความเสี่ยงแบบ parent-child ให้แต่ละทีมนำเลือกใช้ในขั้นพิจารณาเคส</p>
                 <form action="<?= e(base_url($editingCategory ? 'actions/admin_update_team_category.php' : 'actions/admin_save_team_category.php')) ?>" method="post" class="mt-4 space-y-4">
                     <?= csrf_field() ?>
                     <?php if ($editingCategory): ?>
@@ -264,13 +270,9 @@ require __DIR__ . '/../partials/layout_top.php';
                         <input name="sort_order" type="number" min="1" value="<?= e((string) ($editingCategory['sort_order'] ?? '')) ?>" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
                     </div>
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" class="flex-1 rounded-xl bg-amber-500 px-4 py-3 font-semibold text-slate-900 transition hover:bg-amber-400">
-                            <?= $editingCategory ? 'บันทึกการแก้ไข' : 'บันทึกประเภทความเสี่ยง' ?>
-                        </button>
+                        <button type="submit" class="flex-1 rounded-xl bg-amber-500 px-4 py-3 font-semibold text-slate-900 transition hover:bg-amber-400"><?= $editingCategory ? 'บันทึกการแก้ไข' : 'บันทึกประเภทความเสี่ยง' ?></button>
                         <?php if ($editingCategory): ?>
-                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
-                                ยกเลิก
-                            </a>
+                            <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">ยกเลิก</a>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -280,7 +282,10 @@ require __DIR__ . '/../partials/layout_top.php';
         <div class="mt-8 grid gap-6 xl:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 p-6">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-lg font-semibold text-slate-900">ทีมนำในระบบ</h2>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">ทีมนำในระบบ</h2>
+                        <p class="mt-1 text-sm text-slate-500">ค้นหา เปิดแก้ไข และเปิดหรือปิดใช้งานข้อมูลทีมนำ</p>
+                    </div>
                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"><?= e((string) count($filteredTeams)) ?> รายการ</span>
                 </div>
                 <form method="get" class="mt-4 flex gap-3">
@@ -322,7 +327,10 @@ require __DIR__ . '/../partials/layout_top.php';
 
             <div class="rounded-2xl border border-slate-200 p-6">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-lg font-semibold text-slate-900">หน่วยงานในระบบ</h2>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">หน่วยงานในระบบ</h2>
+                        <p class="mt-1 text-sm text-slate-500">ใช้ดูแลหน่วยงานที่อ้างอิงในรายงานและ workflow</p>
+                    </div>
                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"><?= e((string) count($filteredDepartments)) ?> รายการ</span>
                 </div>
                 <form method="get" class="mt-4 flex gap-3">
@@ -341,7 +349,7 @@ require __DIR__ . '/../partials/layout_top.php';
                                         <?= e((string) ($department['department_code'] ?: '-')) ?>
                                         | <?= e((string) ($department['department_type'] ?: 'general')) ?>
                                         <?php if ((int) ($department['is_nursing_group'] ?? 0) === 1): ?>
-                                            | กลุ่มการพยาบาล
+                                            | กลุ่มงานการพยาบาล
                                         <?php endif; ?>
                                         | <?= (int) $department['is_active'] === 1 ? 'ใช้งาน' : 'ปิดใช้งาน' ?>
                                     </div>
@@ -368,7 +376,10 @@ require __DIR__ . '/../partials/layout_top.php';
 
             <div class="rounded-2xl border border-slate-200 p-6">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-lg font-semibold text-slate-900">ประเภทความเสี่ยงของทีมนำ</h2>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">ประเภทความเสี่ยงของทีมนำ</h2>
+                        <p class="mt-1 text-sm text-slate-500">ค้นหา ตรวจ parent-child และจัดการสถานะหมวดของแต่ละทีม</p>
+                    </div>
                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"><?= e((string) count($filteredCategoryTree)) ?> รายการ</span>
                 </div>
                 <form method="get" class="mt-4 flex gap-3">

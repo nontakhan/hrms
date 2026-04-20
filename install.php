@@ -24,10 +24,11 @@ $dbStatus = [
 
 $requiredExtensions = ['pdo', 'pdo_mysql', 'mbstring', 'json', 'openssl', 'fileinfo'];
 foreach ($requiredExtensions as $extension) {
+    $loaded = extension_loaded($extension);
     $checks[] = [
         'label' => 'PHP extension: ' . $extension,
-        'status' => extension_loaded($extension) ? 'pass' : 'fail',
-        'detail' => extension_loaded($extension) ? 'พร้อมใช้งาน' : 'ยังไม่ได้เปิดใช้งาน',
+        'status' => $loaded ? 'pass' : 'fail',
+        'detail' => $loaded ? 'พร้อมใช้งาน' : 'ยังไม่ได้เปิดใช้งาน',
     ];
 }
 
@@ -195,11 +196,13 @@ function badge_label(string $status): string
 <div class="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(29,127,95,0.16),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#eef6f3_100%)]">
     <main class="mx-auto max-w-7xl px-6 py-8 lg:py-12">
         <section class="rounded-[2rem] bg-white p-8 shadow-xl shadow-slate-200/60">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <div class="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">Server Install</div>
-                    <h1 class="text-3xl font-bold text-slate-900">ตัวช่วยติดตั้งระบบบน server</h1>
-                    <p class="mt-2 text-slate-600">หน้านี้ใช้เช็กความพร้อมของเครื่อง server, config, ฐานข้อมูล และไฟล์สำคัญก่อนเปิดใช้งานจริง โดยไม่แก้ไขข้อมูลอัตโนมัติแบบเสี่ยง</p>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div class="max-w-3xl">
+                    <div class="mb-3 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">Server Install</div>
+                    <h1 class="text-3xl font-bold tracking-tight text-slate-900">ตัวช่วยตรวจความพร้อมก่อนติดตั้งบน server</h1>
+                    <p class="mt-3 text-sm leading-7 text-slate-600">
+                        หน้านี้ใช้ตรวจความพร้อมของเครื่อง server, config, ฐานข้อมูล และไฟล์สำคัญก่อนเปิดใช้งานจริง โดยจะรายงานสถานะอย่างปลอดภัยและไม่แก้ไขข้อมูลอัตโนมัติ
+                    </p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <a href="./DEPLOYMENT_CHECKLIST.md" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 font-medium text-emerald-700 transition hover:bg-emerald-100">Deployment Checklist</a>
@@ -209,66 +212,68 @@ function badge_label(string $status): string
             </div>
 
             <div class="mt-8 grid gap-4 md:grid-cols-3">
-                <div class="rounded-2xl bg-emerald-50 p-5">
+                <article class="rounded-2xl bg-emerald-50 p-5">
                     <div class="text-sm font-medium text-emerald-700">พร้อม</div>
                     <div class="mt-2 text-3xl font-bold text-emerald-900"><?= htmlspecialchars((string) $summary['pass']) ?></div>
-                </div>
-                <div class="rounded-2xl bg-amber-50 p-5">
+                </article>
+                <article class="rounded-2xl bg-amber-50 p-5">
                     <div class="text-sm font-medium text-amber-700">ควรตรวจเพิ่ม</div>
                     <div class="mt-2 text-3xl font-bold text-amber-900"><?= htmlspecialchars((string) $summary['warn']) ?></div>
-                </div>
-                <div class="rounded-2xl bg-rose-50 p-5">
+                </article>
+                <article class="rounded-2xl bg-rose-50 p-5">
                     <div class="text-sm font-medium text-rose-700">ต้องแก้ก่อนใช้งาน</div>
                     <div class="mt-2 text-3xl font-bold text-rose-900"><?= htmlspecialchars((string) $summary['fail']) ?></div>
-                </div>
+                </article>
             </div>
 
-            <div class="mt-8 overflow-hidden rounded-2xl border border-slate-200">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left font-semibold text-slate-700">รายการตรวจ</th>
-                            <th class="px-4 py-3 text-left font-semibold text-slate-700">สถานะ</th>
-                            <th class="px-4 py-3 text-left font-semibold text-slate-700">รายละเอียด</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white">
-                        <?php foreach ($checks as $check): ?>
+            <div class="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+                <div class="overflow-hidden rounded-2xl border border-slate-200">
+                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead class="bg-slate-50">
                             <tr>
-                                <td class="px-4 py-3 font-medium text-slate-900"><?= htmlspecialchars((string) $check['label']) ?></td>
-                                <td class="px-4 py-3">
-                                    <span class="rounded-full px-3 py-1 text-xs font-semibold <?= badge_class((string) $check['status']) ?>">
-                                        <?= htmlspecialchars(badge_label((string) $check['status'])) ?>
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-slate-600"><?= htmlspecialchars((string) $check['detail']) ?></td>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-700">รายการตรวจ</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-700">สถานะ</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-700">รายละเอียด</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="mt-8 grid gap-6 xl:grid-cols-2">
-                <div class="rounded-2xl border border-slate-200 p-6">
-                    <h2 class="text-lg font-semibold text-slate-900">Config ปัจจุบัน</h2>
-                    <div class="mt-4 space-y-3 text-sm text-slate-700">
-                        <div class="rounded-xl bg-slate-50 p-4">Base URL: <strong><?= htmlspecialchars((string) ($appConfig['base_url'] ?? '-')) ?></strong></div>
-                        <div class="rounded-xl bg-slate-50 p-4">DB Host: <strong><?= htmlspecialchars((string) ($dbConfig['host'] ?? '-')) ?></strong></div>
-                        <div class="rounded-xl bg-slate-50 p-4">DB Name: <strong><?= htmlspecialchars((string) ($dbConfig['dbname'] ?? '-')) ?></strong></div>
-                        <div class="rounded-xl bg-slate-50 p-4">Upload Dir: <strong><?= htmlspecialchars($uploadDir) ?></strong></div>
-                    </div>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">
+                            <?php foreach ($checks as $check): ?>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium text-slate-900"><?= htmlspecialchars((string) $check['label']) ?></td>
+                                    <td class="px-4 py-3">
+                                        <span class="rounded-full px-3 py-1 text-xs font-semibold <?= badge_class((string) $check['status']) ?>">
+                                            <?= htmlspecialchars(badge_label((string) $check['status'])) ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-600"><?= htmlspecialchars((string) $check['detail']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="rounded-2xl border border-slate-200 p-6">
-                    <h2 class="text-lg font-semibold text-slate-900">ขั้นตอนติดตั้งที่แนะนำ</h2>
-                    <ol class="mt-4 list-decimal space-y-3 pl-5 text-sm leading-7 text-slate-700">
-                        <li>แก้ไฟล์ `config/app.php` และ `config/database.php` ให้ตรงกับ server จริง</li>
-                        <li>สร้างฐานข้อมูลใหม่ แล้ว import `risk_management_schema.sql`</li>
-                        <li>ถ้าเป็น environment ใหม่ ให้ import `risk_management_seed.sql` เฉพาะกรณีที่ต้องใช้ข้อมูลตัวอย่าง</li>
-                        <li>เข้า `install.php` หน้านี้เพื่อตรวจว่าฐานข้อมูล, โฟลเดอร์ และค่าพื้นฐานพร้อมแล้ว</li>
-                        <li>เข้าระบบด้วย admin แล้วตั้งค่า password กลาง, ปีงบ, users, teams, departments และ visibility</li>
-                        <li>ไล่ทดสอบตาม `UAT_CHECKLIST.md` ก่อนเปิดใช้งานจริง</li>
-                    </ol>
+                <div class="space-y-6">
+                    <section class="rounded-2xl border border-slate-200 p-6">
+                        <h2 class="text-lg font-semibold text-slate-900">Config ปัจจุบัน</h2>
+                        <div class="mt-4 space-y-3 text-sm text-slate-700">
+                            <div class="rounded-xl bg-slate-50 p-4">Base URL: <strong><?= htmlspecialchars((string) ($appConfig['base_url'] ?? '-')) ?></strong></div>
+                            <div class="rounded-xl bg-slate-50 p-4">DB Host: <strong><?= htmlspecialchars((string) ($dbConfig['host'] ?? '-')) ?></strong></div>
+                            <div class="rounded-xl bg-slate-50 p-4">DB Name: <strong><?= htmlspecialchars((string) ($dbConfig['dbname'] ?? '-')) ?></strong></div>
+                            <div class="rounded-xl bg-slate-50 p-4">Upload Dir: <strong><?= htmlspecialchars($uploadDir) ?></strong></div>
+                        </div>
+                    </section>
+
+                    <section class="rounded-2xl border border-slate-200 p-6">
+                        <h2 class="text-lg font-semibold text-slate-900">ขั้นตอนติดตั้งที่แนะนำ</h2>
+                        <ol class="mt-4 list-decimal space-y-3 pl-5 text-sm leading-7 text-slate-700">
+                            <li>แก้ไฟล์ `config/app.php` และ `config/database.php` ให้ตรงกับ server จริง</li>
+                            <li>สร้างฐานข้อมูลใหม่ แล้ว import `risk_management_schema.sql`</li>
+                            <li>ถ้าต้องการข้อมูลตัวอย่าง ให้ import `risk_management_seed.sql` เพิ่มใน environment ใหม่</li>
+                            <li>เปิด `install.php` หน้านี้เพื่อตรวจว่า database, โฟลเดอร์ และค่าพื้นฐานพร้อมแล้ว</li>
+                            <li>เข้าสู่ระบบด้วย admin แล้วตั้งค่า password กลาง, ปีงบ, users, teams, departments และ visibility</li>
+                            <li>ทดสอบตาม `UAT_CHECKLIST.md` ก่อนเปิดใช้งานจริง</li>
+                        </ol>
+                    </section>
                 </div>
             </div>
         </section>

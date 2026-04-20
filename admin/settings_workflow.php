@@ -39,26 +39,41 @@ require __DIR__ . '/../partials/layout_top.php';
 ?>
 <main class="mx-auto max-w-7xl px-6 py-8 lg:py-12">
     <section class="space-y-6">
-        <div class="rounded-[2rem] bg-white p-8 shadow-soft">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div class="rounded-[2rem] border border-white/70 bg-white/95 p-8 shadow-soft">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Workflow Settings</div>
                     <h1 class="text-3xl font-bold text-slate-900">ตั้งค่าปีงบประมาณและการมองเห็นเคส</h1>
-                    <p class="mt-2 text-slate-600">ใช้กำหนดปีงบที่ใช้รันเลขเอกสาร และสิทธิ์มองเห็นเคสข้ามหัวหน้าสำหรับโครงสร้างงานที่ซับซ้อน เช่น กลุ่มการพยาบาล</p>
+                    <p class="mt-2 max-w-3xl text-slate-600">ใช้กำหนดปีงบที่ใช้รันเลข assignment ตรวจเลขรันล่าสุดรายทีมนำ และควบคุมสิทธิ์มองเห็นเคสข้ามหัวหน้าสำหรับโครงสร้างงานที่ซับซ้อน</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <a href="<?= e(base_url('admin/workflow_history.php')) ?>" class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 font-medium text-brand-700 transition hover:bg-brand-100">
-                        ดูประวัติการตั้งค่า
-                    </a>
-                    <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
-                        กลับ Dashboard
-                    </a>
+                    <a href="<?= e(base_url('admin/workflow_history.php')) ?>" class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 font-medium text-brand-700 transition hover:bg-brand-100">ดูประวัติการตั้งค่า</a>
+                    <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">กลับ Dashboard</a>
                 </div>
             </div>
         </div>
 
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div class="text-sm text-slate-500">ปีงบที่มี</div>
+                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) count($fiscalYears)) ?></div>
+            </div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <div class="text-sm text-emerald-700">ปีงบที่ active</div>
+                <div class="mt-2 text-3xl font-bold text-emerald-900"><?= e((string) ($activeFiscalYear['year_label'] ?? '-')) ?></div>
+            </div>
+            <div class="rounded-2xl border border-sky-200 bg-sky-50 p-5">
+                <div class="text-sm text-sky-700">รายการ visibility</div>
+                <div class="mt-2 text-3xl font-bold text-sky-900"><?= e((string) count($visibilityEntries)) ?></div>
+            </div>
+            <div class="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                <div class="text-sm text-violet-700">เลขรันที่ติดตาม</div>
+                <div class="mt-2 text-3xl font-bold text-violet-900"><?= e((string) count($runningSummary)) ?></div>
+            </div>
+        </div>
+
         <div class="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <section id="fiscal-years" class="rounded-[2rem] bg-white p-8 shadow-soft">
+            <section id="fiscal-years" class="rounded-[2rem] border border-white/70 bg-white/95 p-8 shadow-soft">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-xl font-semibold text-slate-900">ปีงบประมาณ</h2>
@@ -66,9 +81,7 @@ require __DIR__ . '/../partials/layout_top.php';
                     </div>
                     <div class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                         ปีที่ใช้งานอยู่:
-                        <span class="font-semibold text-slate-900">
-                            <?= e((string) ($activeFiscalYear['year_label'] ?? '-')) ?>
-                        </span>
+                        <span class="font-semibold text-slate-900"><?= e((string) ($activeFiscalYear['year_label'] ?? '-')) ?></span>
                     </div>
                 </div>
 
@@ -82,7 +95,7 @@ require __DIR__ . '/../partials/layout_top.php';
                         <input name="year_label" type="text" maxlength="10" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="2569" value="<?= e((string) ($editingFiscalYear['year_label'] ?? '')) ?>" required>
                     </div>
                     <div>
-                        <label class="mb-2 block text-sm font-medium text-slate-700">ปีแบบย่อ</label>
+                        <label class="mb-2 block text-sm font-medium text-slate-700">ปีย่อ</label>
                         <input name="year_short" type="text" maxlength="10" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="69" value="<?= e((string) ($editingFiscalYear['year_short'] ?? '')) ?>" required>
                     </div>
                     <div>
@@ -93,14 +106,10 @@ require __DIR__ . '/../partials/layout_top.php';
                         <label class="mb-2 block text-sm font-medium text-slate-700">วันที่สิ้นสุด</label>
                         <input name="date_end" type="date" class="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" value="<?= e((string) ($editingFiscalYear['date_end'] ?? '')) ?>" required>
                     </div>
-                    <div class="md:col-span-2 flex flex-wrap gap-3">
-                        <button type="submit" class="rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white transition hover:bg-brand-700">
-                            <?= $editingFiscalYear ? 'บันทึกการแก้ไขปีงบประมาณ' : 'เพิ่มปีงบประมาณ' ?>
-                        </button>
+                    <div class="flex flex-wrap gap-3 md:col-span-2">
+                        <button type="submit" class="rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white transition hover:bg-brand-700"><?= $editingFiscalYear ? 'บันทึกการแก้ไขปีงบประมาณ' : 'เพิ่มปีงบประมาณ' ?></button>
                         <?php if ($editingFiscalYear): ?>
-                            <a href="<?= e(base_url('admin/settings_workflow.php')) ?>" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
-                                ยกเลิกการแก้ไข
-                            </a>
+                            <a href="<?= e(base_url('admin/settings_workflow.php')) ?>" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">ยกเลิกการแก้ไข</a>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -118,12 +127,8 @@ require __DIR__ . '/../partials/layout_top.php';
                         <tbody class="divide-y divide-slate-100 bg-white">
                             <?php foreach ($fiscalYears as $year): ?>
                                 <tr>
-                                    <td class="px-4 py-3 font-medium text-slate-900">
-                                        <?= e((string) $year['year_label']) ?> / <?= e((string) $year['year_short']) ?>
-                                    </td>
-                                    <td class="px-4 py-3 text-slate-600">
-                                        <?= e((string) $year['date_start']) ?> ถึง <?= e((string) $year['date_end']) ?>
-                                    </td>
+                                    <td class="px-4 py-3 font-medium text-slate-900"><?= e((string) $year['year_label']) ?> / <?= e((string) $year['year_short']) ?></td>
+                                    <td class="px-4 py-3 text-slate-600"><?= e((string) $year['date_start']) ?> ถึง <?= e((string) $year['date_end']) ?></td>
                                     <td class="px-4 py-3">
                                         <span class="rounded-full px-3 py-1 text-xs font-semibold <?= (int) $year['is_active'] === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' ?>">
                                             <?= (int) $year['is_active'] === 1 ? 'ใช้งานอยู่' : 'ยังไม่ active' ?>
@@ -131,16 +136,12 @@ require __DIR__ . '/../partials/layout_top.php';
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex flex-wrap gap-2">
-                                            <a href="<?= e(base_url('admin/settings_workflow.php?edit_fiscal_year=' . $year['id'])) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">
-                                                แก้ไข
-                                            </a>
+                                            <a href="<?= e(base_url('admin/settings_workflow.php?edit_fiscal_year=' . $year['id'])) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">แก้ไข</a>
                                             <?php if ((int) $year['is_active'] !== 1): ?>
                                                 <form action="<?= e(base_url('actions/admin_activate_fiscal_year.php')) ?>" method="post">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="fiscal_year_id" value="<?= e((string) $year['id']) ?>">
-                                                    <button type="submit" class="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white">
-                                                        ตั้งเป็นปีที่ใช้งาน
-                                                    </button>
+                                                    <button type="submit" class="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white">ตั้งเป็นปีที่ใช้งาน</button>
                                                 </form>
                                             <?php else: ?>
                                                 <span class="px-3 py-2 text-xs font-medium text-emerald-700">กำลังใช้งาน</span>
@@ -154,11 +155,9 @@ require __DIR__ . '/../partials/layout_top.php';
                 </div>
 
                 <div id="running-numbers" class="mt-6 rounded-2xl border border-slate-200 p-6">
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-slate-900">เลขรันล่าสุดรายทีมนำ</h3>
-                            <p class="mt-1 text-sm text-slate-600">แสดงตัวเลขล่าสุดของปีงบที่ active เพื่อช่วยตรวจสอบความต่อเนื่องของเลข assignment</p>
-                        </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-900">เลขรันล่าสุดรายทีมนำ</h3>
+                        <p class="mt-1 text-sm text-slate-600">ใช้ตรวจสอบความต่อเนื่องของเลข assignment และรีเซ็ตได้เฉพาะกรณีที่ปลอดภัย</p>
                     </div>
                     <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200">
                         <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -185,9 +184,7 @@ require __DIR__ . '/../partials/layout_top.php';
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="team_id" value="<?= e((string) $row['team_id']) ?>">
                                                     <input type="hidden" name="fiscal_year_id" value="<?= e((string) ($activeFiscalYear['id'] ?? 0)) ?>">
-                                                    <button type="submit" class="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white">
-                                                        รีเซ็ตเลขรัน
-                                                    </button>
+                                                    <button type="submit" class="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white">รีเซ็ตเลขรัน</button>
                                                 </form>
                                             <?php else: ?>
                                                 <span class="text-xs text-slate-500">ยังไม่ต้องรีเซ็ต</span>
@@ -206,10 +203,10 @@ require __DIR__ . '/../partials/layout_top.php';
                 </div>
             </section>
 
-            <section id="visibility" class="rounded-[2rem] bg-white p-8 shadow-soft">
+            <section id="visibility" class="rounded-[2rem] border border-white/70 bg-white/95 p-8 shadow-soft">
                 <div>
                     <h2 class="text-xl font-semibold text-slate-900">สิทธิ์มองเห็นเคสข้ามหัวหน้า</h2>
-                    <p class="mt-1 text-sm text-slate-600">ใช้กำหนดว่าใครสามารถมองเห็นเคสของทีมนำและหน่วยงานใดเพิ่มเติมได้ แม้ assignment จะส่งไปยังหัวหน้าคนอื่น</p>
+                    <p class="mt-1 text-sm text-slate-600">กำหนดว่าใครสามารถมองเห็นเคสของทีมนำและหน่วยงานใดเพิ่มได้ แม้ assignment จะส่งไปยังหัวหน้าคนอื่น</p>
                 </div>
 
                 <form action="<?= e(base_url($editingVisibility ? 'actions/admin_update_team_visibility.php' : 'actions/admin_save_team_visibility.php')) ?>" method="post" class="mt-6 grid gap-4 rounded-2xl border border-slate-200 p-6">
@@ -262,13 +259,9 @@ require __DIR__ . '/../partials/layout_top.php';
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" class="rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white transition hover:bg-brand-700">
-                            <?= $editingVisibility ? 'บันทึกการแก้ไขสิทธิ์มองเห็น' : 'บันทึกสิทธิ์มองเห็น' ?>
-                        </button>
+                        <button type="submit" class="rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white transition hover:bg-brand-700"><?= $editingVisibility ? 'บันทึกการแก้ไขสิทธิ์มองเห็น' : 'บันทึกสิทธิ์มองเห็น' ?></button>
                         <?php if ($editingVisibility): ?>
-                            <a href="<?= e(base_url('admin/settings_workflow.php')) ?>" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
-                                ยกเลิกการแก้ไข
-                            </a>
+                            <a href="<?= e(base_url('admin/settings_workflow.php')) ?>" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">ยกเลิกการแก้ไข</a>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -299,9 +292,7 @@ require __DIR__ . '/../partials/layout_top.php';
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex flex-wrap gap-2">
-                                            <a href="<?= e(base_url('admin/settings_workflow.php?edit_visibility=' . $entry['id'])) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">
-                                                แก้ไข
-                                            </a>
+                                            <a href="<?= e(base_url('admin/settings_workflow.php?edit_visibility=' . $entry['id'])) ?>" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">แก้ไข</a>
                                             <form action="<?= e(base_url('actions/admin_toggle_team_visibility_status.php')) ?>" method="post">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="visibility_id" value="<?= e((string) $entry['id']) ?>">

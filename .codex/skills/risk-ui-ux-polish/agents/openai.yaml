@@ -1,0 +1,7 @@
+interface:
+  display_name: "Risk UI UX Polish"
+  short_description: "ยกระดับ UI/UX ระบบรายงานความเสี่ยง"
+  default_prompt: "Use $risk-ui-ux-polish to improve the UI/UX of this hospital risk management system with concrete file changes and a rollout plan."
+
+policy:
+  allow_implicit_invocation: true

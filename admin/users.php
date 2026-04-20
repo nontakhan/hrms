@@ -65,26 +65,42 @@ try {
 require __DIR__ . '/../partials/layout_top.php';
 ?>
 <main class="mx-auto max-w-7xl px-6 py-8 lg:py-12">
-    <section class="rounded-[2rem] bg-white p-8 shadow-soft">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <section class="rounded-[2rem] border border-white/70 bg-white/95 p-8 shadow-soft">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <div class="mb-2 inline-flex rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">Admin Users</div>
                 <h1 class="text-3xl font-bold text-slate-900">จัดการผู้ใช้ระบบ</h1>
-                <p class="mt-2 text-slate-600">เพิ่ม แก้ไข ปิดใช้งาน และรีเซ็ตรหัสผ่านผู้ใช้จากหน้าจอเดียว เพื่อให้สิทธิ์แต่ละ role พร้อมใช้งานจริง</p>
+                <p class="mt-2 max-w-3xl text-slate-600">เพิ่ม แก้ไข ปิดใช้งาน และรีเซ็ตรหัสผ่านผู้ใช้จากหน้าเดียว พร้อมเห็นบทบาท หน่วยงาน และทีมที่ผูกอยู่ได้ชัดขึ้น</p>
             </div>
             <div class="flex flex-wrap gap-3">
-                <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800">
-                    ไปหน้า Master Data
-                </a>
-                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50">
-                    กลับ Dashboard
-                </a>
+                <a href="<?= e(base_url('admin/master_data.php')) ?>" class="rounded-xl bg-slate-900 px-4 py-3 font-medium text-white transition hover:bg-slate-800">ไปหน้า Master Data</a>
+                <a href="<?= e(base_url('dashboard.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">กลับ Dashboard</a>
+            </div>
+        </div>
+
+        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div class="text-sm text-slate-500">ผู้ใช้ทั้งหมด</div>
+                <div class="mt-2 text-3xl font-bold text-slate-900"><?= e((string) count($users)) ?></div>
+            </div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <div class="text-sm text-emerald-700">ใช้งานอยู่</div>
+                <div class="mt-2 text-3xl font-bold text-emerald-900"><?= e((string) count(array_filter($users, static fn(array $user): bool => (int) $user['is_active'] === 1))) ?></div>
+            </div>
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5">
+                <div class="text-sm text-rose-700">ปิดใช้งาน</div>
+                <div class="mt-2 text-3xl font-bold text-rose-900"><?= e((string) count(array_filter($users, static fn(array $user): bool => (int) $user['is_active'] !== 1))) ?></div>
+            </div>
+            <div class="rounded-2xl border border-sky-200 bg-sky-50 p-5">
+                <div class="text-sm text-sky-700">Roles ที่มี</div>
+                <div class="mt-2 text-3xl font-bold text-sky-900"><?= e((string) count($roles)) ?></div>
             </div>
         </div>
 
         <div class="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <div class="rounded-2xl border border-slate-200 p-6">
                 <h2 class="text-lg font-semibold text-slate-900"><?= $editingUser ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้ใหม่' ?></h2>
+                <p class="mt-1 text-sm text-slate-500">กำหนด role หน่วยงาน ทีม และระดับหัวหน้าให้เหมาะกับสิทธิ์การใช้งานของแต่ละบัญชี</p>
                 <form action="<?= e(base_url($editingUser ? 'actions/admin_update_user.php' : 'actions/admin_save_user.php')) ?>" method="post" class="mt-4 space-y-4">
                     <?= csrf_field() ?>
                     <?php if ($editingUser): ?>
@@ -146,20 +162,22 @@ require __DIR__ . '/../partials/layout_top.php';
                         </select>
                     </div>
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" class="flex-1 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700">
-                            <?= $editingUser ? 'บันทึกการแก้ไข' : 'บันทึกผู้ใช้' ?>
-                        </button>
+                        <button type="submit" class="flex-1 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700"><?= $editingUser ? 'บันทึกการแก้ไข' : 'บันทึกผู้ใช้' ?></button>
                         <?php if ($editingUser): ?>
-                            <a href="<?= e(base_url('admin/users.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
-                                ยกเลิก
-                            </a>
+                            <a href="<?= e(base_url('admin/users.php')) ?>" class="rounded-xl border border-slate-300 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">ยกเลิก</a>
                         <?php endif; ?>
                     </div>
                 </form>
             </div>
 
             <div class="rounded-2xl border border-slate-200 p-6">
-                <h2 class="text-lg font-semibold text-slate-900">รายการผู้ใช้ในระบบ</h2>
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">รายการผู้ใช้ในระบบ</h2>
+                        <p class="mt-1 text-sm text-slate-500">ค้นหา แก้ไข ปิดใช้งาน หรือรีเซ็ตรหัสผ่านได้จากตารางเดียว</p>
+                    </div>
+                    <div class="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-600"><?= e((string) count($users)) ?> บัญชี</div>
+                </div>
                 <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
                     <table id="usersTable" class="display w-full text-sm">
                         <thead>
@@ -183,12 +201,14 @@ require __DIR__ . '/../partials/layout_top.php';
                                     <td><?= e((string) ($row['department_name'] ?: '-')) ?></td>
                                     <td><?= e((string) ($row['team_name'] ?: '-')) ?></td>
                                     <td><?= e((string) ($row['head_level'] ?: '-')) ?></td>
-                                    <td><?= (int) $row['is_active'] === 1 ? 'ใช้งาน' : 'ปิดใช้งาน' ?></td>
+                                    <td>
+                                        <span class="rounded-full px-2.5 py-1 text-xs font-medium <?= (int) $row['is_active'] === 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' ?>">
+                                            <?= (int) $row['is_active'] === 1 ? 'ใช้งาน' : 'ปิดใช้งาน' ?>
+                                        </span>
+                                    </td>
                                     <td>
                                         <div class="flex flex-wrap gap-2">
-                                            <a href="<?= e(base_url('admin/users.php?edit=' . $row['id'])) ?>" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">
-                                                แก้ไข
-                                            </a>
+                                            <a href="<?= e(base_url('admin/users.php?edit=' . $row['id'])) ?>" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">แก้ไข</a>
                                             <?php if ((int) $row['id'] !== (int) (Auth::user()['id'] ?? 0)): ?>
                                                 <form action="<?= e(base_url('actions/admin_toggle_user_status.php')) ?>" method="post">
                                                     <?= csrf_field() ?>
@@ -202,9 +222,7 @@ require __DIR__ . '/../partials/layout_top.php';
                                             <form action="<?= e(base_url('actions/admin_reset_user_password.php')) ?>" method="post">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="user_id" value="<?= e((string) $row['id']) ?>">
-                                                <button type="submit" class="rounded-lg bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-900">
-                                                    รีเซ็ต Password
-                                                </button>
+                                                <button type="submit" class="rounded-lg bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-900">รีเซ็ต Password</button>
                                             </form>
                                         </div>
                                     </td>
@@ -233,6 +251,7 @@ require __DIR__ . '/../partials/layout_top.php';
     $(function () {
         $('#usersTable').DataTable({
             pageLength: 10,
+            responsive: true,
             order: [[0, 'asc']],
             language: {
                 search: 'ค้นหา:',
